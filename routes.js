@@ -14,7 +14,7 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, '/tmp');
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -28,9 +28,7 @@ router.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, 'images', 'favicon.ico'));
 });
 
-router.get('/', async(req, res) => {
-    console.log('GET / route');
-    await connectToDatabase();
+router.get('/', (req, res) => {
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
         if (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -43,8 +41,6 @@ router.get('/', async(req, res) => {
 });
 
 router.post('/recipes', upload.single('image'), async(req, res) => {
-    console.log('POST /recipes route');
-    await connectToDatabase();
     const { name, ingredients, instructions } = req.body;
     const image = req.file.filename;
 
@@ -60,8 +56,6 @@ router.post('/recipes', upload.single('image'), async(req, res) => {
 });
 
 router.get('/recipes', async(req, res) => {
-    console.log('GET /recipes route');
-    await connectToDatabase();
     try {
         const recipes = await getAllRecipes();
         res.status(200).json(recipes);
@@ -72,8 +66,6 @@ router.get('/recipes', async(req, res) => {
 });
 
 router.delete('/recipes/:id', async(req, res) => {
-    console.log('DELETE /recipes/:id route');
-    await connectToDatabase();
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -94,8 +86,6 @@ router.delete('/recipes/:id', async(req, res) => {
 });
 
 router.post('/recipes/:id', upload.single('image'), async(req, res) => {
-    console.log('POST /recipes/:id route');
-    await connectToDatabase();
     const { id } = req.params;
     const { name, ingredients, instructions } = req.body;
     const image = req.file ? req.file.filename : null;
