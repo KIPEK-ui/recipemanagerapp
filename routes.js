@@ -3,6 +3,7 @@ const path = require('path');
 const { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe } = require('./db');
 const multer = require('multer');
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 
 // Ensure the uploads directory exists
@@ -26,6 +27,7 @@ const upload = multer({ storage: storage });
 router.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, 'images', 'favicon.ico'));
 });
+
 router.get('/', (req, res) => {
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
         if (err) {
@@ -38,7 +40,7 @@ router.get('/', (req, res) => {
     });
 });
 
-router.post('/insert', upload.single('image'), async(req, res) => {
+router.post('/recipes', upload.single('image'), async(req, res) => {
     const { name, ingredients, instructions } = req.body;
     const image = req.file.filename;
 
@@ -65,32 +67,10 @@ router.get('/recipes', async(req, res) => {
 
 router.delete('/recipes/:id', async(req, res) => {
     const { id } = req.params;
-    try {
-        await deleteRecipe(id);
-        res.status(200).json({ message: 'Recipe deleted successfully' });
-    } catch (err) {
-        console.error('Error deleting recipe:', err);
-        res.status(500).json({ message: 'Error deleting recipe' });
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid ObjectId' });
     }
-});
-
-router.post('/update/:id', upload.single('image'), async(req, res) => {
-    const { id } = req.params;
-    const { name, ingredients, instructions } = req.body;
-    const image = req.file ? req.file.filename : null;
-
-    const recipe = { name, ingredients, instructions, image };
-
-    try {
-        await updateRecipe(id, recipe);
-        res.status(200).json({ message: 'Recipe updated successfully' });
-    } catch (err) {
-        console.error('Error updating recipe:', err);
-        res.status(500).json({ message: 'Error updating recipe' });
-    }
-});
-router.delete('/recipes/:id', async(req, res) => {
-    const { id } = req.params;
 
     try {
         const result = await deleteRecipe(id);
@@ -105,6 +85,24 @@ router.delete('/recipes/:id', async(req, res) => {
     }
 });
 
+router.post('/recipes/:id', upload.single('image'), async(req, res) => {
+    const { id } = req.params;
+    const { name, ingredients, instructions } = req.body;
+    const image = req.file ? req.file.filename : null;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid ObjectId' });
+    }
+
+    const recipe = { name, ingredients, instructions, image };
+
+    try {
+        await updateRecipe(id, recipe);
+        res.status(200).json({ message: 'Recipe updated successfully' });
+    } catch (err) {
+        console.error('Error updating recipe:', err);
+        res.status(500).json({ message: 'Error updating recipe' });
+    }
+});
 
 module.exports = router;

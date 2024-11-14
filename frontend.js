@@ -17,7 +17,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
 
         $.ajax({
-            url: '/insert',
+            url: '/recipes',
             type: 'POST',
             data: formData,
             processData: false,
@@ -40,7 +40,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
 
         $.ajax({
-            url: `/update/${id}`,
+            url: `/recipes/${id}`,
             type: 'POST',
             data: formData,
             processData: false,
@@ -90,7 +90,7 @@ $(document).ready(function() {
 
     // Handle update button click
     $(document).on('click', '.update-btn', function() {
-        const id = $(this).data('_id');
+        const id = $(this).data('id');
         const name = $(this).data('name');
         const ingredients = $(this).data('ingredients');
         const instructions = $(this).data('instructions');
@@ -107,7 +107,7 @@ $(document).ready(function() {
 
     // Handle delete button click
     $(document).on('click', '.delete-btn', function() {
-        const id = $(this).data('_id');
+        const id = $(this).data('id');
         $.ajax({
             url: `/recipes/${id}`,
             type: 'DELETE',
