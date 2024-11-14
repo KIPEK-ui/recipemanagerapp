@@ -14,16 +14,22 @@ if (!cached) {
 
 async function connectToDatabase() {
     if (cached.conn) {
+        console.log('Using cached database connection');
         return cached.conn;
     }
 
     if (!cached.promise) {
+        console.log('Creating new database connection');
         const opts = {
             bufferCommands: false,
         };
 
         cached.promise = mongoose.connect(MONGOURL, opts).then((mongoose) => {
+            console.log('Database connected');
             return mongoose;
+        }).catch((err) => {
+            console.error('Database connection error:', err);
+            throw err;
         });
     }
 
@@ -99,6 +105,5 @@ async function deleteRecipe(id) {
         throw err;
     }
 }
-
 
 module.exports = { connectToDatabase, insertRecipe, getAllRecipes, updateRecipe, deleteRecipe };
