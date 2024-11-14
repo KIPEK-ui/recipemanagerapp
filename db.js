@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 const MONGOURL = process.env.MONGO_URL;
 
+if (!MONGOURL) {
+    throw new Error('MONGO_URL environment variable is not defined');
+}
+
 let cached = global.mongoose;
 
 if (!cached) {
@@ -26,9 +30,6 @@ async function connectToDatabase() {
     cached.conn = await cached.promise;
     return cached.conn;
 }
-
-
-
 
 // Define the Recipe schema
 const recipeSchema = new mongoose.Schema({
