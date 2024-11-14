@@ -1,12 +1,34 @@
 const mongoose = require('mongoose');
 
 const MONGOURL = process.env.MONGO_URL;
-// Connect to MongoDB
-mongoose.connect(MONGOURL, {}).then(() => {
-    console.log('Connected to MongoDB');
-}).catch(err => {
-    console.error('Error connecting to MongoDB:', err);
-});
+
+let cached = global.mongoose;
+
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectToDatabase() {
+    if (cached.conn) {
+        return cached.conn;
+    }
+
+    if (!cached.promise) {
+        const opts = {
+            bufferCommands: false,
+        };
+
+        cached.promise = mongoose.connect(MONGOURL, opts).then((mongoose) => {
+            return mongoose;
+        });
+    }
+
+    cached.conn = await cached.promise;
+    return cached.conn;
+}
+
+
+
 
 // Define the Recipe schema
 const recipeSchema = new mongoose.Schema({
@@ -78,4 +100,4 @@ async function deleteRecipe(id) {
 }
 
 
-module.exports = { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe };
+module.exports = { connectToDatabase, insertRecipe, getAllRecipes, updateRecipe, deleteRecipe };

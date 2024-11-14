@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe } = require('./db');
+const { connectToDatabase, insertRecipe, getAllRecipes, updateRecipe, deleteRecipe } = require('./db');
 const multer = require('multer');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -28,7 +28,8 @@ router.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, 'images', 'favicon.ico'));
 });
 
-router.get('/', (req, res) => {
+router.get('/', async(req, res) => {
+    await connectToDatabase();
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
         if (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -41,6 +42,7 @@ router.get('/', (req, res) => {
 });
 
 router.post('/recipes', upload.single('image'), async(req, res) => {
+    await connectToDatabase();
     const { name, ingredients, instructions } = req.body;
     const image = req.file.filename;
 
@@ -56,6 +58,7 @@ router.post('/recipes', upload.single('image'), async(req, res) => {
 });
 
 router.get('/recipes', async(req, res) => {
+    await connectToDatabase();
     try {
         const recipes = await getAllRecipes();
         res.status(200).json(recipes);
@@ -66,6 +69,7 @@ router.get('/recipes', async(req, res) => {
 });
 
 router.delete('/recipes/:id', async(req, res) => {
+    await connectToDatabase();
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -86,6 +90,7 @@ router.delete('/recipes/:id', async(req, res) => {
 });
 
 router.post('/recipes/:id', upload.single('image'), async(req, res) => {
+    await connectToDatabase();
     const { id } = req.params;
     const { name, ingredients, instructions } = req.body;
     const image = req.file ? req.file.filename : null;
