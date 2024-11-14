@@ -29,6 +29,7 @@ router.get('/favicon.ico', (req, res) => {
 });
 
 router.get('/', async(req, res) => {
+    console.log('GET / route');
     await connectToDatabase();
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
         if (err) {
@@ -42,6 +43,7 @@ router.get('/', async(req, res) => {
 });
 
 router.post('/recipes', upload.single('image'), async(req, res) => {
+    console.log('POST /recipes route');
     await connectToDatabase();
     const { name, ingredients, instructions } = req.body;
     const image = req.file.filename;
@@ -58,6 +60,7 @@ router.post('/recipes', upload.single('image'), async(req, res) => {
 });
 
 router.get('/recipes', async(req, res) => {
+    console.log('GET /recipes route');
     await connectToDatabase();
     try {
         const recipes = await getAllRecipes();
@@ -69,6 +72,7 @@ router.get('/recipes', async(req, res) => {
 });
 
 router.delete('/recipes/:id', async(req, res) => {
+    console.log('DELETE /recipes/:id route');
     await connectToDatabase();
     const { id } = req.params;
 
@@ -90,6 +94,7 @@ router.delete('/recipes/:id', async(req, res) => {
 });
 
 router.post('/recipes/:id', upload.single('image'), async(req, res) => {
+    console.log('POST /recipes/:id route');
     await connectToDatabase();
     const { id } = req.params;
     const { name, ingredients, instructions } = req.body;
