@@ -1,25 +1,27 @@
 {
-  "name": "recipemanagerapp",
-  "version": "1.0.0",
-  "description": "A Recipe Book for All",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "HTML",
-    "CSS",
-    "RECiPES",
-    "RECIPE",
-    "BOOKLET",
-    "LOCALHOST"
-  ],
-  "author": "EMMANUEL KETER",
-  "license": "ISC",
-  "dependencies": {
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "mariadb": "^3.4.0",
-    "multer": "^1.4.5-lts.1"
-  }
+    "name": "recipemanagerapp",
+    "version": "1.0.0",
+    "description": "A Recipe Book for All",
+    "main": "index.js",
+    "scripts": {
+        "dev": "npm start",
+        "start": "nodemon index.js"
+    },
+    "keywords": [
+        "HTML",
+        "CSS",
+        "RECiPES",
+        "RECIPE",
+        "BOOKLET",
+        "LOCALHOST"
+    ],
+    "author": "EMMANUEL KETER",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1",
+        "mongoose": "^8.8.1",
+        "multer": "^1.4.5-lts.1",
+        "nodemon": "^3.1.7"
+    }
 }
