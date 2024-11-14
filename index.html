@@ -10,7 +10,86 @@
     <title>Recipe Manager App</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/styles/globals.css" rel="stylesheet">
+    <style>
+        .card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-buttons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: none;
+        }
+        
+        .card:hover .card-buttons {
+            display: block;
+        }
+        
+        .card-img-top {
+            max-height: 500px;
+            max-width: fit-content;
+            object-fit: fill;
+        }
+        
+        .card-body {
+            overflow: visible;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .card-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: aqua;
+        }
+        
+        .card-text {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: brown;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .form-control {
+            max-width: 100%;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            border-color: aqua;
+            box-shadow: inset 0px 0px 4px #fff;
+            border: 1px solid #ccc;
+            transition: border-color 0.3s ease;
+            outline: none;
+            transition: box-shadow 0.3s ease;
+            transition: border 0.3s ease;
+            transition: background-color 0.3s ease;
+            background-color: #fff;
+        }
+        
+        #preview {
+            max-height: 200px;
+            object-fit: cover;
+            display: none;
+            /* Hide the preview image initially */
+        }
+    </style>
 </head>
 
 <body>
@@ -116,7 +195,135 @@
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="/api/frontend.js">
+    <script>
+        function previewImage(event) {
+            const preview = document.getElementById('preview');
+            preview.src = URL.createObjectURL(event.target.files[0]);
+            preview.style.display = 'block'; // Show the preview image
+        }
+
+        function previewUpdateImage(event) {
+            const preview = document.getElementById('updatePreview');
+            preview.src = URL.createObjectURL(event.target.files[0]);
+            preview.style.display = 'block'; // Show the preview image
+        }
+
+        $(document).ready(function() {
+            // Handle form submission
+            $('#insertForm').on('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: '/recipes',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        alert('Recipe inserted successfully!');
+                        $('#insertModal').modal('hide');
+                        fetchRecipes();
+                    },
+                    error: function() {
+                        alert('Error inserting recipe.');
+                    }
+                });
+            });
+
+            // Handle update form submission
+            $('#updateForm').on('submit', function(event) {
+                event.preventDefault();
+                const id = $('#updateId').val();
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: `/recipes/${id}`,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        alert('Recipe updated successfully!');
+                        $('#updateModal').modal('hide');
+                        fetchRecipes();
+                    },
+                    error: function() {
+                        alert('Error updating recipe.');
+                    }
+                });
+            });
+
+            // Fetch all recipes
+            function fetchRecipes() {
+                $.ajax({
+                    url: '/recipes',
+                    type: 'GET',
+                    success: function(data) {
+                        const recipeList = $('#recipeList');
+                        recipeList.empty(); // Clear existing recipes
+                        const template = document.getElementById('recipeCardTemplate').content;
+
+                        data.forEach(recipe => {
+                            const clone = document.importNode(template, true);
+                            clone.querySelector('.card-img-top').src = `/uploads/${recipe.image}`;
+                            clone.querySelector('.card-img-top').alt = recipe.name;
+                            clone.querySelector('.card-title').textContent = recipe.name;
+                            clone.querySelector('.card-text').innerHTML = `<strong>Ingredients:</strong> ${recipe.ingredients}`;
+                            clone.querySelectorAll('.card-text')[1].innerHTML = `<strong>Instructions:</strong> ${recipe.instructions}`;
+                            clone.querySelector('.update-btn').setAttribute('data-id', recipe._id);
+                            clone.querySelector('.update-btn').setAttribute('data-name', recipe.name);
+                            clone.querySelector('.update-btn').setAttribute('data-ingredients', recipe.ingredients);
+                            clone.querySelector('.update-btn').setAttribute('data-instructions', recipe.instructions);
+                            clone.querySelector('.update-btn').setAttribute('data-image', recipe.image);
+                            clone.querySelector('.delete-btn').setAttribute('data-id', recipe._id);
+                            recipeList.append(clone);
+                        });
+                    },
+                    error: function() {
+                        alert('Error fetching recipes.');
+                    }
+                });
+            }
+
+            // Handle update button click
+            $(document).on('click', '.update-btn', function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                const ingredients = $(this).data('ingredients');
+                const instructions = $(this).data('instructions');
+                const image = $(this).data('image');
+
+                $('#updateId').val(id);
+                $('#updateName').val(name);
+                $('#updateIngredients').val(ingredients);
+                $('#updateInstructions').val(instructions);
+                $('#updatePreview').attr('src', `/uploads/${image}`).show();
+
+                $('#updateModal').modal('show');
+            });
+
+            // Handle delete button click
+            $(document).on('click', '.delete-btn', function() {
+                const id = $(this).data('id');
+                $.ajax({
+                    url: `/recipes/${id}`,
+                    type: 'DELETE',
+                    success: function(response) {
+                        alert('Recipe deleted successfully!');
+                        fetchRecipes();
+                    },
+                    error: function() {
+                        alert('Error deleting recipe.');
+                    }
+                });
+            });
+
+
+
+            // Initial fetch
+            fetchRecipes();
+        });
     </script>
 </body>
 
