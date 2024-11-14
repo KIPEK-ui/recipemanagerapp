@@ -1,0 +1,78 @@
+.card {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: none;
+}
+
+.card:hover .card-buttons {
+    display: block;
+}
+
+.card-img-top {
+    max-height: 500px;
+    max-width: fit-content;
+    object-fit: fill;
+}
+
+.card-body {
+    overflow: visible;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: aqua;
+}
+
+.card-text {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: brown;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.form-control {
+    max-width: 100%;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border-color: aqua;
+    box-shadow: inset 0px 0px 4px #fff;
+    border: 1px solid #ccc;
+    transition: border-color 0.3s ease;
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    transition: border 0.3s ease;
+    transition: background-color 0.3s ease;
+    background-color: #fff;
+}
+
+#preview {
+    max-height: 200px;
+    object-fit: cover;
+    display: none;
+    /* Hide the preview image initially */
+}

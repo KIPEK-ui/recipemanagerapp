@@ -58,8 +58,17 @@ async function updateRecipe(id, recipe) {
 
 // Delete a recipe from the database
 async function deleteRecipe(id) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.error('Invalid ObjectId:', id);
+        throw new Error('Invalid ObjectId');
+    }
+
     try {
         const result = await Recipe.findByIdAndDelete(id);
+        if (!result) {
+            console.log('Recipe not found:', id);
+            return null;
+        }
         console.log('Recipe deleted successfully:', result);
         return result;
     } catch (err) {
@@ -67,5 +76,6 @@ async function deleteRecipe(id) {
         throw err;
     }
 }
+
 
 module.exports = { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe };

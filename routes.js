@@ -89,5 +89,22 @@ router.post('/update/:id', upload.single('image'), async(req, res) => {
         res.status(500).json({ message: 'Error updating recipe' });
     }
 });
+router.delete('/recipes/:id', async(req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await deleteRecipe(id);
+        if (result) {
+            res.status(200).json({ message: 'Recipe deleted successfully', result });
+        } else {
+            res.status(404).json({ message: 'Recipe not found' });
+        }
+    } catch (err) {
+        console.error('Error deleting recipe:', err);
+        res.status(500).json({ message: 'Error deleting recipe' });
+    }
+});
+
+
 
 module.exports = router;
