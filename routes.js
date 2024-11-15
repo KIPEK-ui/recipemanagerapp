@@ -6,21 +6,17 @@ const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
 
-// Ensure the uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'tmp/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
+// Define the schema for storing files in MongoDB
+const fileSchema = new mongoose.Schema({
+    name: String,
+    data: Buffer,
+    contentType: String,
 });
 
+const File = mongoose.model('File', fileSchema);
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Serve the favicon
@@ -42,9 +38,25 @@ router.get('/', (req, res) => {
 
 router.post('/recipes', upload.single('image'), async(req, res) => {
     const { name, ingredients, instructions } = req.body;
-    const image = req.file.filename;
+    const file = req.file;
 
-    const recipe = { name, ingredients, instructions, image };
+    const recipe = { name, ingredients, instructions };
+
+    if (file) {
+        const newFile = new File({
+            name: file.originalname,
+            data: file.buffer,
+            contentType: file.mimetype,
+        });
+
+        try {
+            await newFile.save();
+            recipe.image = newFile._id;
+        } catch (err) {
+            console.error('Error saving file:', err);
+            return res.status(500).json({ message: 'Error saving file' });
+        }
+    }
 
     try {
         await insertRecipe(recipe);
@@ -88,13 +100,29 @@ router.delete('/recipes/:id', async(req, res) => {
 router.post('/recipes/:id', upload.single('image'), async(req, res) => {
     const { id } = req.params;
     const { name, ingredients, instructions } = req.body;
-    const image = req.file ? req.file.filename : null;
+    const file = req.file;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'Invalid ObjectId' });
     }
 
-    const recipe = { name, ingredients, instructions, image };
+    const recipe = { name, ingredients, instructions };
+
+    if (file) {
+        const newFile = new File({
+            name: file.originalname,
+            data: file.buffer,
+            contentType: file.mimetype,
+        });
+
+        try {
+            await newFile.save();
+            recipe.image = newFile._id;
+        } catch (err) {
+            console.error('Error saving file:', err);
+            return res.status(500).json({ message: 'Error saving file' });
+        }
+    }
 
     try {
         await updateRecipe(id, recipe);
