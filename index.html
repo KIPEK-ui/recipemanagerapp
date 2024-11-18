@@ -127,6 +127,7 @@
                     })
                     .catch(error => {
                         console.error('Error loading page:', error);
+                        $('#authModal').modal('show'); // Show authentication modal if token is not valid
                     });
             }
 
