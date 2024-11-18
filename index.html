@@ -128,7 +128,7 @@
                         body
                     }) => {
                         if (status === 401 && body.msg === 'Authorization header missing or invalid') {
-                            throw new Error('Authorization header missing or invalid');
+                            $('#authModal').modal('show'); // Show authentication modal if token is not valid
                         }
                         return body;
                     })
@@ -139,7 +139,7 @@
                     })
                     .catch(error => {
                         console.error('Error loading page:', error);
-                        $('#authModal').modal('show'); // Show authentication modal if token is not valid
+
                     });
             }
 
