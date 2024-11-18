@@ -119,7 +119,19 @@
                             'Authorization': `Bearer ${token}`
                         }
                     })
-                    .then(response => response.text())
+                    .then(response => response.json().then(data => ({
+                        status: response.status,
+                        body: data
+                    })))
+                    .then(({
+                        status,
+                        body
+                    }) => {
+                        if (status === 401 && body.msg === 'Authorization header missing or invalid') {
+                            throw new Error('Authorization header missing or invalid');
+                        }
+                        return body;
+                    })
                     .then(data => {
                         document.open();
                         document.write(data);
