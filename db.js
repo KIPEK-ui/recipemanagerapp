@@ -14,10 +14,26 @@ const recipeSchema = new mongoose.Schema({
     ingredients: { type: String, required: true },
     instructions: { type: String, required: true },
     image: { type: String, required: true }
+
 });
 
-// Create the Recipe model
+// Define the User schema
+const userSchema = new mongoose.Schema({
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    password: {
+        type: String,
+        required: true
+    }
+});
+
+
+// Create the models
 const Recipe = mongoose.model('Recipe', recipeSchema);
+const User = mongoose.model('User', userSchema);
 
 // Insert a new recipe into the database
 async function insertRecipe(recipe) {
@@ -35,7 +51,43 @@ async function insertRecipe(recipe) {
 // Retrieve all recipes from the database
 async function getAllRecipes() {
     try {
-        const recipes = await Recipe.find();
+        const recipes = await Recipe.find().populate('image');
+        console.log('Recipes fetched successfully:', recipes);
+        return recipes;
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        throw err;
+    }
+}
+
+// Retrieve a recipe by ID
+async function getRecipeById(id) {
+    try {
+        const recipe = await Recipe.findById(id).populate('image');
+        console.log('Recipe fetched successfully:', recipe);
+        return recipe;
+    } catch (err) {
+        console.error('Error fetching recipe:', err);
+        throw err;
+    }
+}
+
+// Retrieve recipes by category
+async function getRecipesByCategory(category) {
+    try {
+        const recipes = await Recipe.find({ category }).populate('image');
+        console.log('Recipes fetched successfully:', recipes);
+        return recipes;
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        throw err;
+    }
+}
+
+// Retrieve recipes by user
+async function getRecipesByUser(userId) {
+    try {
+        const recipes = await Recipe.find({ user: userId }).populate('image');
         console.log('Recipes fetched successfully:', recipes);
         return recipes;
     } catch (err) {
@@ -47,7 +99,7 @@ async function getAllRecipes() {
 // Update a recipe in the database
 async function updateRecipe(id, recipe) {
     try {
-        const result = await Recipe.findByIdAndUpdate(id, recipe, { new: true });
+        const result = await Recipe.findByIdAndUpdate(id, recipe, { new: true }).populate('image');
         console.log('Recipe updated successfully:', result);
         return result;
     } catch (err) {
@@ -77,5 +129,4 @@ async function deleteRecipe(id) {
     }
 }
 
-
-module.exports = { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe };
+module.exports = { insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe };

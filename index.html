@@ -4,45 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Recipe World , Make your own Recipe book with your own Recipes">
-    <meta name="keywords" content="HTML, CSS, JavaScript, favicon, Recipes,metadata">
-    <meta name="author" content="Emmanuel Keter">
     <title>Recipe Manager App</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        .card {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .card-buttons {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: none;
-        }
-        
-        .card:hover .card-buttons {
-            display: block;
-        }
-        
-        .card-img-top {
-            max-height: 500px;
-            max-width: fit-content;
-            object-fit: fill;
-        }
-        
-        .card-body {
-            overflow: visible;
-            height: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-        
         .card-title {
             white-space: nowrap;
             overflow: hidden;
@@ -87,7 +51,6 @@
             max-height: 200px;
             object-fit: cover;
             display: none;
-            /* Hide the preview image initially */
         }
     </style>
 </head>
@@ -223,6 +186,7 @@
                     success: function(response) {
                         alert('Recipe inserted successfully!');
                         $('#insertModal').modal('hide');
+                        $('#insertForm')[0].reset();
                         fetchRecipes();
                     },
                     error: function() {
@@ -246,6 +210,7 @@
                     success: function(response) {
                         alert('Recipe updated successfully!');
                         $('#updateModal').modal('hide');
+                        $('#updateForm')[0].reset();
                         fetchRecipes();
                     },
                     error: function() {
@@ -266,7 +231,7 @@
 
                         data.forEach(recipe => {
                             const clone = document.importNode(template, true);
-                            clone.querySelector('.card-img-top').src = `/uploads/${recipe.image}`;
+                            clone.querySelector('.card-img-top').src = `/images/${recipe.image}`;
                             clone.querySelector('.card-img-top').alt = recipe.name;
                             clone.querySelector('.card-title').textContent = recipe.name;
                             clone.querySelector('.card-text').innerHTML = `<strong>Ingredients:</strong> ${recipe.ingredients}`;
@@ -298,7 +263,7 @@
                 $('#updateName').val(name);
                 $('#updateIngredients').val(ingredients);
                 $('#updateInstructions').val(instructions);
-                $('#updatePreview').attr('src', `/uploads/${image}`).show();
+                $('#updatePreview').attr('src', `/images/${image}`).show();
 
                 $('#updateModal').modal('show');
             });
@@ -306,20 +271,21 @@
             // Handle delete button click
             $(document).on('click', '.delete-btn', function() {
                 const id = $(this).data('id');
-                $.ajax({
-                    url: `/recipes/${id}`,
-                    type: 'DELETE',
-                    success: function(response) {
-                        alert('Recipe deleted successfully!');
-                        fetchRecipes();
-                    },
-                    error: function() {
-                        alert('Error deleting recipe.');
-                    }
-                });
+
+                if (confirm('Are you sure you want to delete this recipe?')) {
+                    $.ajax({
+                        url: `/recipes/${id}`,
+                        type: 'DELETE',
+                        success: function(response) {
+                            alert('Recipe deleted successfully!');
+                            fetchRecipes();
+                        },
+                        error: function() {
+                            alert('Error deleting recipe.');
+                        }
+                    });
+                }
             });
-
-
 
             // Initial fetch
             fetchRecipes();
