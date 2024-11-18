@@ -5,6 +5,28 @@ const { check, validationResult } = require('express-validator');
 const User = require('./db'); // Assuming you have a User model
 const router = express.Router();
 
+router.get('/', (req, res) => {
+    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end("Error loading Page");
+        } else {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        }
+    });
+});
+router.get('/home', (req, res) => {
+    fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end("Error loading Page");
+        } else {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        }
+    });
+});
 // User registration
 router.post('/register', [
     check('email', 'Please include a valid email').isEmail(),
