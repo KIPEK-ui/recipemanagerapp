@@ -35,6 +35,19 @@ const userSchema = new mongoose.Schema({
 const Recipe = mongoose.model('Recipe', recipeSchema);
 const User = mongoose.model('User', userSchema);
 
+// Function to insert a new user
+const insertUser = async(email, password) => {
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        const newUser = new User({ email, password: hashedPassword });
+        await newUser.save();
+        return newUser;
+    } catch (err) {
+        console.error('Error inserting user:', err);
+        throw err;
+    }
+};
 // Insert a new recipe into the database
 async function insertRecipe(recipe) {
     try {
@@ -129,4 +142,4 @@ async function deleteRecipe(id) {
     }
 }
 
-module.exports = { insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe };
+module.exports = { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe };

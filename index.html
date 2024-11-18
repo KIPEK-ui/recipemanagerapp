@@ -22,6 +22,80 @@
             <button class="btn btn-primary" onclick="loadPage()">View Recipes</button>
         </div>
     </div>
+    <!-- Authentication Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="authModalLabel">Authentication</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-primary" id="loginBtn">Login</button>
+                    <button class="btn btn-secondary" id="signupBtn">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalLabel">Login</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="loginEmail">Email:</label>
+                            <input type="email" class="form-control" id="loginEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password:</label>
+                            <input type="password" class="form-control" id="loginPassword" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <button class="btn btn-danger mt-2" id="googleLogin">Login with Google</button>
+                    <button class="btn btn-dark mt-2" id="githubLogin">Login with GitHub</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal fade" id="signupModal" tabindex="-1" role="dialog" aria-labelledby="signupModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="signupModalLabel">Sign Up</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <form id="signupForm">
+                        <div class="form-group">
+                            <label for="signupEmail">Email:</label>
+                            <input type="email" class="form-control" id="signupEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signupPassword">Password:</label>
+                            <input type="password" class="form-control" id="signupPassword" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Sign Up</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         function loadPage() {
@@ -36,6 +110,70 @@
                     console.error('Error loading page:', error);
                 });
         }
+        $(document).ready(function() {
+            $('#loginForm').on('submit', async function(event) {
+                event.preventDefault();
+                const email = $('#loginEmail').val();
+                const password = $('#loginPassword').val();
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password
+                        })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        localStorage.setItem('token', result.token);
+                        alert('Login successful!');
+                        $('#loginModal').modal('hide');
+                    } else {
+                        alert('Login failed: ' + result.msg);
+                    }
+                } catch (error) {
+                    console.error('Error logging in:', error);
+                }
+            });
+
+            $('#signupForm').on('submit', async function(event) {
+                event.preventDefault();
+                const email = $('#signupEmail').val();
+                const password = $('#signupPassword').val();
+                try {
+                    const response = await fetch('/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password
+                        })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('Sign up successful!');
+                        $('#signupModal').modal('hide');
+                    } else {
+                        alert('Sign up failed: ' + result.msg);
+                    }
+                } catch (error) {
+                    console.error('Error signing up:', error);
+                }
+            });
+
+            $('#googleLogin').click(function() {
+                window.location.href = '/auth/google';
+            });
+
+            $('#githubLogin').click(function() {
+                window.location.href = '/auth/github';
+            });
+        });
     </script>
 </body>
 

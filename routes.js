@@ -1,9 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const { insertRecipe, getAllRecipes, updateRecipe, deleteRecipe } = require('./db');
+const { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const passport = require('passport');
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github').Strategy;
 const { check, validationResult } = require('express-validator');
 const router = express.Router();
 const multer = require('multer');
@@ -55,7 +60,7 @@ router.get('/', (req, res) => {
     });
 });
 
-router.get('/home', (req, res) => {
+router.get('/home', auth, (req, res) => {
     fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
         if (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
@@ -65,6 +70,74 @@ router.get('/home', (req, res) => {
             res.end(data);
         }
     });
+});
+
+// JWT Strategy
+const opts = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: process.env.JWT_SECRET
+};
+
+passport.use(new JwtStrategy(opts, async(jwt_payload, done) => {
+    try {
+        const user = await User.findById(jwt_payload.id);
+        if (user) {
+            return done(null, user);
+        } else {
+            return done(null, false);
+        }
+    } catch (err) {
+        return done(err, false);
+    }
+}));
+
+// Google Strategy
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: '/auth/google/callback'
+}, async(token, tokenSecret, profile, done) => {
+    try {
+        let user = await User.findOne({ googleId: profile.id });
+        if (!user) {
+            user = new User({ googleId: profile.id, email: profile.emails[0].value });
+            await user.save();
+        }
+        return done(null, user);
+    } catch (err) {
+        return done(err, false);
+    }
+}));
+
+// GitHub Strategy
+passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: '/auth/github/callback'
+}, async(accessToken, refreshToken, profile, done) => {
+    try {
+        let user = await User.findOne({ githubId: profile.id });
+        if (!user) {
+            user = new User({ githubId: profile.id, email: profile.emails[0].value });
+            await user.save();
+        }
+        return done(null, user);
+    } catch (err) {
+        return done(err, false);
+    }
+}));
+
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser(async(id, done) => {
+    try {
+        const user = await User.findById(id);
+        done(null, user);
+    } catch (err) {
+        done(err, false);
+    }
 });
 
 // List of all recipes (insecure endpoint)
@@ -191,29 +264,16 @@ router.delete('/recipes/:id', async(req, res) => {
 });
 
 // User registration
-router.post('/register', [
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password must be 6 or more characters').isLength({ min: 6 })
-], async(req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
+// Register
+router.post('/register', async(req, res) => {
     const { email, password } = req.body;
-
     try {
         let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ msg: 'User already exists' });
         }
 
-        user = new User({ email, password });
-
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-
-        await user.save();
+        user = await insertUser(email, password);
 
         const payload = { user: { id: user.id } };
 
@@ -227,18 +287,9 @@ router.post('/register', [
     }
 });
 
-// User login
-router.post('/login', [
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password is required').exists()
-], async(req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
+// Login
+router.post('/login', async(req, res) => {
     const { email, password } = req.body;
-
     try {
         let user = await User.findOne({ email });
         if (!user) {
@@ -262,9 +313,32 @@ router.post('/login', [
     }
 });
 
+// Google Authentication
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
+router.get('/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
+    const payload = { user: { id: req.user.id } };
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+        if (err) throw err;
+        res.redirect(`/auth/success?token=${token}`);
+    });
+});
 
+// GitHub Authentication
+router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
 
+router.get('/auth/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
+    const payload = { user: { id: req.user.id } };
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+        if (err) throw err;
+        res.redirect(`/auth/success?token=${token}`);
+    });
+});
+
+// Authentication success route
+router.get('/auth/success', (req, res) => {
+    res.json({ token: req.query.token });
+});
 // List of all users
 router.get('/users', auth, async(req, res) => {
     try {

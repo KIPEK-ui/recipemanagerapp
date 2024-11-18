@@ -1,6 +1,7 @@
 require('dotenv').config();
 const http = require('http');
 const express = require('express');
+const passport = require('passport');
 const routes = require('./routes');
 const path = require('path');
 const app = express();
@@ -11,6 +12,9 @@ swagger(app);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Initialize Passport
+app.use(passport.initialize());
 
 // Serve static files from the 'uploads', 'images', and root directories
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
