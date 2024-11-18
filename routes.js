@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
@@ -28,20 +29,36 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Middleware to protect routes
-const auth = (req, res, next) => {
-    const token = req.header('x-auth-token');
-    if (!token) {
-        return res.status(401).json({ msg: 'No token, authorization denied' });
+function auth(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        console.log('Received token:', token); // Log the token for debugging
+        jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+            if (err) {
+                console.error('Token verification error:', err); // Log the error
+                return res.status(403).json({ msg: 'Token is not valid' });
+            }
+            req.user = user;
+            next();
+        });
+    } else {
+        res.status(401).json({ msg: 'Authorization header missing or invalid' });
     }
+}
 
+
+// Use the auth middleware for protected routes
+router.get('/api/recipes', auth, async(req, res) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded.user;
-        next();
+        const recipes = await getAllRecipes();
+        res.status(200).json(recipes);
     } catch (err) {
-        res.status(401).json({ msg: 'Token is not valid' });
+        console.error('Error fetching recipes:', err);
+        res.status(500).json({ message: 'Error fetching recipes' });
     }
-};
+});
+
 
 // Serve the favicon
 router.get('/favicon.ico', (req, res) => {
@@ -100,7 +117,12 @@ passport.use(new GoogleStrategy({
     try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
-            user = new User({ googleId: profile.id, email: profile.emails[0].value });
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            user = new User({
+                googleId: profile.id,
+                email: profile.emails[0].value,
+                password: randomPassword
+            });
             await user.save();
         }
         return done(null, user);
@@ -337,8 +359,35 @@ router.get('/auth/github/callback', passport.authenticate('github', { session: f
 
 // Authentication success route
 router.get('/auth/success', (req, res) => {
-    res.json({ token: req.query.token });
+    const token = req.query.token;
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Authentication Success</title>
+        </head>
+        <body>
+            <script>
+                (function() {
+                    const token = "${token}";
+                    if (token) {
+                        localStorage.setItem('token', token);
+                        alert('Authentication successful!');
+                        window.location.href = '/home'; // Redirect to home page
+                    } else {
+                        alert('Authentication failed!');
+                        window.location.href = '/'; // Redirect to login page
+                    }
+                })();
+            </script>
+        </body>
+        </html>
+    `;
+    res.send(htmlContent);
 });
+
 // List of all users
 router.get('/users', auth, async(req, res) => {
     try {

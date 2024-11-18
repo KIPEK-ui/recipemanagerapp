@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const bcrypt = require('bcryptjs');
 const MONGOURL = process.env.MONGO_URL;
 // Connect to MongoDB
 mongoose.connect(MONGOURL, {}).then(() => {
@@ -19,16 +19,21 @@ const recipeSchema = new mongoose.Schema({
 
 // Define the User schema
 const userSchema = new mongoose.Schema({
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    password: {
-        type: String,
-        required: true
-    }
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: function() { return !this.googleId && !this.githubId; } },
+    googleId: { type: String },
+    githubId: { type: String }
 });
+
+// Hash password before saving if it is provided
+userSchema.pre('save', async function(next) {
+    if (this.password && this.isModified('password')) {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
+});
+
 
 
 // Create the models

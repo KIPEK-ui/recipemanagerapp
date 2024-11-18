@@ -19,9 +19,12 @@
         <h1 class="text-center">Recipe App</h1>
         <p class="text-center">Welcome to the Recipe App!</p>
         <div class="text-center">
-            <button class="btn btn-primary" onclick="loadPage()">View Recipes</button>
+            <button class="btn btn-primary" id="viewRecipesBtn">View Recipes</button>
+            <button class="btn btn-danger" id="logoutBtn" style="display: none;">Logout</button>
+            <!-- Logout Button Hidden by Default -->
         </div>
     </div>
+
     <!-- Authentication Modal -->
     <div class="modal fade" id="authModal" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -29,8 +32,8 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="authModalLabel">Authentication</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
+                        <span aria-hidden="true">×</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <button class="btn btn-primary" id="loginBtn">Login</button>
@@ -47,8 +50,8 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="loginModalLabel">Login</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
+                        <span aria-hidden="true">×</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <form id="loginForm">
@@ -76,8 +79,8 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="signupModalLabel">Sign Up</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
+                        <span aria-hidden="true">×</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <form id="signupForm">
@@ -96,21 +99,60 @@
         </div>
     </div>
 
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
+    <!-- Custom JS -->
     <script>
-        function loadPage() {
-            fetch('/home')
-                .then(response => response.text())
-                .then(data => {
-                    document.open();
-                    document.write(data);
-                    document.close();
-                })
-                .catch(error => {
-                    console.error('Error loading page:', error);
-                });
-        }
         $(document).ready(function() {
+            // Function to check if the user is authorized
+            function isAuthorized() {
+                const token = localStorage.getItem('token');
+                return token !== null;
+            }
+
+            function loadPage() {
+                const token = localStorage.getItem('token');
+                fetch('/home', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        document.open();
+                        document.write(data);
+                        document.close();
+                    })
+                    .catch(error => {
+                        console.error('Error loading page:', error);
+                    });
+            }
+
+            // Handle view recipes button click
+            $('#viewRecipesBtn').click(function() {
+                if (isAuthorized()) {
+                    loadPage();
+                } else {
+                    $('#authModal').modal('show');
+                }
+            });
+            // Show or hide logout button based on authorization
+            if (isAuthorized()) {
+                $('#logoutBtn').show();
+            } else {
+                $('#logoutBtn').hide();
+            }
+
+            $('#signupBtn').click(function() {
+                $('#signupModal').modal('show');
+            });
+            $('#loginBtn').click(function() {
+                $('#loginModal').modal('show');
+            });
+
+            // Handle login form submission
             $('#loginForm').on('submit', async function(event) {
                 event.preventDefault();
                 const email = $('#loginEmail').val();
@@ -131,6 +173,7 @@
                         localStorage.setItem('token', result.token);
                         alert('Login successful!');
                         $('#loginModal').modal('hide');
+                        loadPage(); // Load page after successful login
                     } else {
                         alert('Login failed: ' + result.msg);
                     }
@@ -139,6 +182,7 @@
                 }
             });
 
+            // Handle signup form submission
             $('#signupForm').on('submit', async function(event) {
                 event.preventDefault();
                 const email = $('#signupEmail').val();
@@ -166,13 +210,25 @@
                 }
             });
 
+            // Handle Google login
             $('#googleLogin').click(function() {
                 window.location.href = '/auth/google';
             });
 
+            // Handle GitHub login
             $('#githubLogin').click(function() {
                 window.location.href = '/auth/github';
             });
+
+            // Handle logout'
+            $('#logoutBtn').click(function() {
+                localStorage.removeItem('token');
+                alert('Logout successful!');
+                loadPage(); // Load page after successful logout
+            });
+
+
+
         });
     </script>
 </body>
