@@ -1,13 +1,14 @@
 const fs = require('fs');
+const path = require('path');
+const { insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
-const User = require('./db'); // Assuming you have a User model
 const router = express.Router();
 
 router.get('/', (req, res) => {
-    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+    fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
         if (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
             res.end("Error loading Page");
@@ -126,7 +127,6 @@ router.get('/users', auth, async(req, res) => {
         res.status(500).send('Server error');
     }
 });
-
 // List of all users
 router.get('/users', auth, async(req, res) => {
     try {
@@ -209,6 +209,5 @@ router.get('/recipes/user/:userId', auth, async(req, res) => {
         res.status(500).json({ message: 'Error fetching recipes' });
     }
 });
-
 
 module.exports = router;
