@@ -7,9 +7,8 @@
     <meta name="description" content="Recipe World , Make your own Recipe book with your own Recipes">
     <meta name="keywords" content="HTML, CSS, JavaScript, favicon, Recipes,metadata">
     <meta name="author" content="Emmanuel Keter">
-    <title>Recipe Manager App</title>
+    <title>Recipe World</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <title>Recipe Manager App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .card {
@@ -79,6 +78,9 @@
 <body>
     <div class="container mt-5">
         <h1 class="text-center">Recipe Manager App</h1>
+        <div class="text-center mt-3">
+            <input type="text" id="searchBar" class="form-control" placeholder="Search by category">
+        </div>
         <div id="recipes" class="mt-5">
             <h2>All Recipes</h2>
             <div id="recipeList" class="row"></div>
@@ -86,7 +88,7 @@
         </div>
     </div>
 
-    <!-- Insert Modal -->
+    <!-- Insert Recipe Modal -->
     <div class="modal fade" id="insertModal" tabindex="-1" role="dialog" aria-labelledby="insertModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -111,6 +113,16 @@
                             <textarea class="form-control" id="instructions" name="instructions" rows="3" required></textarea>
                         </div>
                         <div class="form-group">
+                            <label for="category">Category:</label>
+                            <select class="form-control" id="category" name="category" required>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Snacks">Snacks</option>
+                                <option value="Desserts">Desserts</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="image">Upload Image:</label>
                             <input type="file" class="form-control" id="image" name="image" accept=".jpeg, .png, .jpg" required onchange="previewImage(event)">
                             <img id="preview" src="#" alt="Image Preview">
@@ -122,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Update Modal -->
+    <!-- Update Recipe Modal -->
     <div class="modal fade" id="updateModal" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -146,6 +158,16 @@
                         <div class="form-group">
                             <label for="updateInstructions">Instructions:</label>
                             <textarea class="form-control" id="updateInstructions" name="instructions" rows="3" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateCategory">Category:</label>
+                            <select class="form-control" id="updateCategory" name="category" required>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Snacks">Snacks</option>
+                                <option value="Desserts">Desserts</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="updateImage">Upload Image:</label>
@@ -193,6 +215,49 @@
         }
 
         $(document).ready(function() {
+            const token = localStorage.getItem('token');
+
+            function fetchRecipes() {
+                const searchQuery = $('#searchBar').val().toLowerCase();
+                $.ajax({
+                    url: '/recipes',
+                    type: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    success: function(data) {
+                        const recipeList = $('#recipeList');
+                        recipeList.empty(); // Clear existing recipes
+                        const template = document.getElementById('recipeCardTemplate').content;
+
+                        data.forEach(recipe => {
+                            if (recipe.category.toLowerCase().includes(searchQuery)) {
+                                const clone = document.importNode(template, true);
+                                clone.querySelector('.card-img-top').src = `/images/${recipe.image}`;
+                                clone.querySelector('.card-img-top').alt = recipe.name;
+                                clone.querySelector('.card-title').textContent = recipe.name;
+                                clone.querySelector('.card-text').innerHTML = `<strong>Ingredients:</strong> ${recipe.ingredients}`;
+                                clone.querySelectorAll('.card-text')[1].innerHTML = `<strong>Instructions:</strong> ${recipe.instructions}`;
+                                clone.querySelector('.update-btn').setAttribute('data-id', recipe._id);
+                                clone.querySelector('.update-btn').setAttribute('data-name', recipe.name);
+                                clone.querySelector('.update-btn').setAttribute('data-ingredients', recipe.ingredients);
+                                clone.querySelector('.update-btn').setAttribute('data-instructions', recipe.instructions);
+                                clone.querySelector('.update-btn').setAttribute('data-image', recipe.image);
+                                clone.querySelector('.update-btn').setAttribute('data-category', recipe.category);
+                                clone.querySelector('.delete-btn').setAttribute('data-id', recipe._id);
+                                if (recipe.userId === localStorage.getItem('userId')) {
+                                    clone.querySelector('.card-buttons').style.display = 'block';
+                                }
+                                recipeList.append(clone);
+                            }
+                        });
+                    },
+                    error: function() {
+                        alert('Error fetching recipes.');
+                    }
+                });
+            }
+
             // Handle form submission
             $('#insertForm').on('submit', function(event) {
                 event.preventDefault();
@@ -201,6 +266,9 @@
                 $.ajax({
                     url: '/recipes',
                     type: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -225,6 +293,9 @@
                 $.ajax({
                     url: `/recipes/${id}`,
                     type: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -240,55 +311,6 @@
                 });
             });
 
-            // Fetch all recipes
-            function fetchRecipes() {
-                $.ajax({
-                    url: '/recipes',
-                    type: 'GET',
-                    success: function(data) {
-                        const recipeList = $('#recipeList');
-                        recipeList.empty(); // Clear existing recipes
-                        const template = document.getElementById('recipeCardTemplate').content;
-
-                        data.forEach(recipe => {
-                            const clone = document.importNode(template, true);
-                            clone.querySelector('.card-img-top').src = `/images/${recipe.image}`;
-                            clone.querySelector('.card-img-top').alt = recipe.name;
-                            clone.querySelector('.card-title').textContent = recipe.name;
-                            clone.querySelector('.card-text').innerHTML = `<strong>Ingredients:</strong> ${recipe.ingredients}`;
-                            clone.querySelectorAll('.card-text')[1].innerHTML = `<strong>Instructions:</strong> ${recipe.instructions}`;
-                            clone.querySelector('.update-btn').setAttribute('data-id', recipe._id);
-                            clone.querySelector('.update-btn').setAttribute('data-name', recipe.name);
-                            clone.querySelector('.update-btn').setAttribute('data-ingredients', recipe.ingredients);
-                            clone.querySelector('.update-btn').setAttribute('data-instructions', recipe.instructions);
-                            clone.querySelector('.update-btn').setAttribute('data-image', recipe.image);
-                            clone.querySelector('.delete-btn').setAttribute('data-id', recipe._id);
-                            recipeList.append(clone);
-                        });
-                    },
-                    error: function() {
-                        alert('Error fetching recipes.');
-                    }
-                });
-            }
-
-            // Handle update button click
-            $(document).on('click', '.update-btn', function() {
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-                const ingredients = $(this).data('ingredients');
-                const instructions = $(this).data('instructions');
-                const image = $(this).data('image');
-
-                $('#updateId').val(id);
-                $('#updateName').val(name);
-                $('#updateIngredients').val(ingredients);
-                $('#updateInstructions').val(instructions);
-                $('#updatePreview').attr('src', `/images/${image}`).show();
-
-                $('#updateModal').modal('show');
-            });
-
             // Handle delete button click
             $(document).on('click', '.delete-btn', function() {
                 const id = $(this).data('id');
@@ -297,6 +319,9 @@
                     $.ajax({
                         url: `/recipes/${id}`,
                         type: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
                         success: function(response) {
                             alert('Recipe deleted successfully!');
                             fetchRecipes();
@@ -306,6 +331,30 @@
                         }
                     });
                 }
+            });
+
+            // Handle update button click
+            $(document).on('click', '.update-btn', function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                const ingredients = $(this).data('ingredients');
+                const instructions = $(this).data('instructions');
+                const image = $(this).data('image');
+                const category = $(this).data('category');
+
+                $('#updateId').val(id);
+                $('#updateName').val(name);
+                $('#updateIngredients').val(ingredients);
+                $('#updateInstructions').val(instructions);
+                $('#updateCategory').val(category);
+                $('#updatePreview').attr('src', `/images/${image}`).show();
+
+                $('#updateModal').modal('show');
+            });
+
+            // Handle search bar input
+            $('#searchBar').on('input', function() {
+                fetchRecipes();
             });
 
             // Initial fetch

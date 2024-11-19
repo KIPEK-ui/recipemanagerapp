@@ -16,8 +16,8 @@
 
 <body>
     <div class="container mt-5">
-        <h1 class="text-center">Recipe App</h1>
-        <p class="text-center">Welcome to the Recipe App!</p>
+        <h1 class="text-center">Recipe World</h1>
+        <p class="text-center">Welcome to the Recipe World!</p>
         <div class="text-center">
             <button class="btn btn-primary" id="viewRecipesBtn">View Recipes</button>
             <button class="btn btn-danger" id="logoutBtn" style="display: none;">Logout</button>
@@ -151,44 +151,12 @@
                 $('#loginModal').modal('show');
             });
 
-            // Handle login form submission
-            $('#loginForm').on('submit', async function(event) {
-                event.preventDefault();
-                const email = $('#loginEmail').val();
-                const password = $('#loginPassword').val();
-                try {
-                    const response = await fetch('/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            email,
-                            password
-                        })
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        localStorage.setItem('token', result.token);
-                        alert('Login successful!');
-                        $('#loginModal').modal('hide');
-                        $('#logoutBtn').show();
-                        loadPage();
-                    } else {
-                        alert('Login failed: ' + result.msg);
-                    }
-                } catch (error) {
-                    console.error('Error logging in:', error);
-                }
-            });
-
-            // Handle signup form submission
-            $('#signupForm').on('submit', async function(event) {
+            $('#signupForm').submit(function(event) {
                 event.preventDefault();
                 const email = $('#signupEmail').val();
                 const password = $('#signupPassword').val();
-                try {
-                    const response = await fetch('/register', {
+
+                fetch('/register', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -197,40 +165,72 @@
                             email,
                             password
                         })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.token) {
+                            localStorage.setItem('token', data.token);
+                            $('#signupModal').modal('hide');
+                            $('#logoutBtn').show();
+                            alert('Sign up successful!');
+                        } else {
+                            alert('Sign up failed!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during sign up:', error);
+                        alert('Sign up failed!');
                     });
-                    const result = await response.json();
-                    if (response.ok) {
-                        alert('Sign up successful!');
-                        $('#signupModal').modal('hide');
-                    } else {
-                        alert('Sign up failed: ' + result.msg);
-                    }
-                } catch (error) {
-                    console.error('Error signing up:', error);
-                }
             });
 
-            // Handle Google login
+            $('#loginForm').submit(function(event) {
+                event.preventDefault();
+                const email = $('#loginEmail').val();
+                const password = $('#loginPassword').val();
+
+                fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.token) {
+                            localStorage.setItem('token', data.token);
+                            $('#loginModal').modal('hide');
+                            $('#logoutBtn').show();
+                            alert('Login successful!');
+                        } else {
+                            alert('Login failed!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during login:', error);
+                        alert('Login failed!');
+                    });
+            });
+
             $('#googleLogin').click(function() {
                 window.location.href = '/auth/google';
             });
 
-            // Handle GitHub login
             $('#githubLogin').click(function() {
                 window.location.href = '/auth/github';
             });
 
-
-            // Handle logout
             $('#logoutBtn').click(function() {
                 localStorage.removeItem('token');
-                alert('Logout successful!');
-                $('#logoutBtn').hide(); // Hide logout button after logout
-                window.location.href = '/'; // Redirect to login page
+                $('#logoutBtn').hide();
+                alert('Logged out successfully!');
+                window.location.href = '/';
             });
         });
     </script>
-
 </body>
 
 </html>

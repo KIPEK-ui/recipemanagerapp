@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
+const { User, Recipe, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -11,7 +11,6 @@ const ExtractJwt = require('passport-jwt').ExtractJwt;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GitHubStrategy = require('passport-github').Strategy;
 const router = express.Router();
-const multer = require('multer');
 const mongoose = require('mongoose');
 
 // Define the schema for storing files in MongoDB
@@ -22,10 +21,6 @@ const fileSchema = new mongoose.Schema({
 });
 
 const File = mongoose.model('File', fileSchema);
-
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
 // Middleware to protect routes
 function auth(req, res, next) {
@@ -45,48 +40,6 @@ function auth(req, res, next) {
         res.status(401).json({ msg: 'Authorization header missing or invalid' });
     }
 }
-
-
-// Use the auth middleware for protected routes
-router.get('/api/recipes', auth, async(req, res) => {
-    try {
-        const recipes = await getAllRecipes();
-        res.status(200).json(recipes);
-    } catch (err) {
-        console.error('Error fetching recipes:', err);
-        res.status(500).json({ message: 'Error fetching recipes' });
-    }
-});
-
-
-// Serve the favicon
-router.get('/favicon.ico', (req, res) => {
-    res.sendFile(path.join(__dirname, 'images', 'favicon.ico'));
-});
-
-router.get('/', (req, res) => {
-    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-        if (err) {
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end("Error loading form");
-        } else {
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(data);
-        }
-    });
-});
-
-router.get('/home', auth, (req, res) => {
-    fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
-        if (err) {
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end("Error loading Page");
-        } else {
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(data);
-        }
-    });
-});
 
 // JWT Strategy
 const opts = {
@@ -112,7 +65,7 @@ passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: '/auth/google/callback'
-}, async(token, tokenSecret, profile, done) => {
+}, async(accessToken, refreshToken, profile, done) => {
     try {
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
@@ -120,8 +73,14 @@ passport.use(new GoogleStrategy({
             user = new User({
                 googleId: profile.id,
                 email: profile.emails[0].value,
-                password: randomPassword
+                password: randomPassword,
+                googleAccessToken: accessToken,
+                googleRefreshToken: refreshToken
             });
+            await user.save();
+        } else {
+            user.googleAccessToken = accessToken;
+            user.googleRefreshToken = refreshToken;
             await user.save();
         }
         return done(null, user);
@@ -139,7 +98,18 @@ passport.use(new GitHubStrategy({
     try {
         let user = await User.findOne({ githubId: profile.id });
         if (!user) {
-            user = new User({ githubId: profile.id, email: profile.emails[0].value });
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            user = new User({
+                githubId: profile.id,
+                email: profile.emails[0].value,
+                password: randomPassword,
+                githubAccessToken: accessToken,
+                githubRefreshToken: refreshToken
+            });
+            await user.save();
+        } else {
+            user.githubAccessToken = accessToken;
+            user.githubRefreshToken = refreshToken;
             await user.save();
         }
         return done(null, user);
@@ -161,38 +131,25 @@ passport.deserializeUser(async(id, done) => {
     }
 });
 
-// List of all recipes (insecure endpoint)
-router.post('/recipes', upload.single('image'), async(req, res) => {
-    const { name, ingredients, instructions } = req.body;
-    const file = req.file;
+// Insecure endpoints
 
-    const recipe = { name, ingredients, instructions };
-
-    if (file) {
-        const newFile = new File({
-            name: file.originalname,
-            data: file.buffer,
-            contentType: file.mimetype,
-        });
-
-        try {
-            await newFile.save();
-            recipe.image = newFile._id;
-        } catch (err) {
-            console.error('Error saving file:', err);
-            return res.status(500).json({ message: 'Error saving file' });
-        }
-    }
-
-    try {
-        await insertRecipe(recipe);
-        res.status(200).json({ message: 'Recipe inserted successfully' });
-    } catch (err) {
-        console.error('Error inserting recipe:', err);
-        res.status(500).json({ message: 'Error inserting recipe' });
-    }
+// Serve the favicon
+router.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, 'images', 'favicon.ico'));
 });
 
+// Serve the index page
+router.get('/', (req, res) => {
+    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end("Error loading form");
+        } else {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        }
+    });
+});
 
 // Retrieve all recipes
 router.get('/recipes', async(req, res) => {
@@ -226,66 +183,95 @@ router.get('/images/:id', async(req, res) => {
     }
 });
 
-// Update a recipe
-router.post('/recipes/:id', upload.single('image'), async(req, res) => {
-    const { id } = req.params;
-    const { name, ingredients, instructions } = req.body;
-    const file = req.file;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid ObjectId' });
-    }
-
-    const recipe = { name, ingredients, instructions };
-
-    if (file) {
-        const newFile = new File({
-            name: file.originalname,
-            data: file.buffer,
-            contentType: file.mimetype,
-        });
-
-        try {
-            await newFile.save();
-            recipe.image = newFile._id;
-        } catch (err) {
-            console.error('Error saving file:', err);
-            return res.status(500).json({ message: 'Error saving file' });
-        }
-    }
-
+// Recipe information by id
+router.get('/recipes/:id', async(req, res) => {
     try {
-        await updateRecipe(id, recipe);
-        res.status(200).json({ message: 'Recipe updated successfully' });
+        const recipe = await getRecipeById(req.params.id);
+        if (!recipe) {
+            return res.status(404).json({ message: 'Recipe not found' });
+        }
+        res.json(recipe);
     } catch (err) {
-        console.error('Error updating recipe:', err);
-        res.status(500).json({ message: 'Error updating recipe' });
+        console.error('Error fetching recipe:', err);
+        res.status(500).json({ message: 'Error fetching recipe' });
     }
 });
 
-// Delete a recipe
-router.delete('/recipes/:id', async(req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid ObjectId' });
-    }
-
+// List of all recipes by category/subcategory
+router.get('/recipes/category/:category', async(req, res) => {
     try {
-        const result = await deleteRecipe(id);
-        if (result) {
-            res.status(200).json({ message: 'Recipe deleted successfully', result });
+        const recipes = await getRecipesByCategory(req.params.category);
+        res.json(recipes);
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        res.status(500).json({ message: 'Error fetching recipes' });
+    }
+});
+
+// Secure endpoints
+
+// Use the auth middleware for protected routes
+
+// Serve the home page
+router.get('/home', auth, (req, res) => {
+    fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end("Error loading Page");
         } else {
-            res.status(404).json({ message: 'Recipe not found' });
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
         }
+    });
+});
+
+// List of all users
+router.get('/users', auth, async(req, res) => {
+    try {
+        const users = await User.find();
+        res.json(users);
     } catch (err) {
-        console.error('Error deleting recipe:', err);
-        res.status(500).json({ message: 'Error deleting recipe' });
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
 });
 
+// One user’s details by email/id
+router.get('/users/:id', auth, async(req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// List of all users by gender (assuming gender field exists)
+router.get('/users/gender/:gender', auth, async(req, res) => {
+    try {
+        const users = await User.find({ gender: req.params.gender });
+        res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// List of recipes by a user (secure endpoint)
+router.get('/recipes/user/:userId', auth, async(req, res) => {
+    try {
+        const recipes = await getRecipesByUser(req.params.userId);
+        res.json(recipes);
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        res.status(500).json({ message: 'Error fetching recipes' });
+    }
+});
 // User registration
-// Register
 router.post('/register', async(req, res) => {
     const { email, password } = req.body;
     try {
@@ -308,7 +294,7 @@ router.post('/register', async(req, res) => {
     }
 });
 
-// Login
+// User login
 router.post('/login', async(req, res) => {
     const { email, password } = req.body;
     try {
@@ -387,76 +373,91 @@ router.get('/auth/success', (req, res) => {
     res.send(htmlContent);
 });
 
-// List of all users
-router.get('/users', auth, async(req, res) => {
-    try {
-        const users = await User.find();
-        res.json(users);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
-    }
-});
+// Add a new recipe
+router.post('/recipes', async(req, res) => {
+    const { name, ingredients, instructions, image, category } = req.body;
 
-// One user’s details by email/id
-router.get('/users/:id', auth, async(req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
+    const recipe = { name, ingredients, instructions, category };
+
+    if (image) {
+        const newFile = new File({
+            name: image.name,
+            data: Buffer.from(image.data, 'base64'),
+            contentType: image.contentType,
+        });
+
+        try {
+            await newFile.save();
+            recipe.image = newFile._id;
+        } catch (err) {
+            console.error('Error saving file:', err);
+            return res.status(500).json({ message: 'Error saving file' });
         }
-        res.json(user);
+    }
+
+    try {
+        await insertRecipe(recipe);
+        res.status(200).json({ message: 'Recipe inserted successfully' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        console.error('Error inserting recipe:', err);
+        res.status(500).json({ message: 'Error inserting recipe' });
     }
 });
 
-// List of all users by gender (assuming gender field exists)
-router.get('/users/gender/:gender', auth, async(req, res) => {
-    try {
-        const users = await User.find({ gender: req.params.gender });
-        res.json(users);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+// Update a recipe
+router.post('/recipes/:id', async(req, res) => {
+    const { id } = req.params;
+    const { name, ingredients, instructions, image, category } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid ObjectId' });
     }
-});
 
+    const recipe = { name, ingredients, instructions, category };
 
-// Recipe information by id
-router.get('/recipes/:id', async(req, res) => {
-    try {
-        const recipe = await getRecipeById(req.params.id);
-        if (!recipe) {
-            return res.status(404).json({ message: 'Recipe not found' });
+    if (image) {
+        const newFile = new File({
+            name: image.name,
+            data: Buffer.from(image.data, 'base64'),
+            contentType: image.contentType,
+        });
+
+        try {
+            await newFile.save();
+            recipe.image = newFile._id;
+        } catch (err) {
+            console.error('Error saving file:', err);
+            return res.status(500).json({ message: 'Error saving file' });
         }
-        res.json(recipe);
+    }
+
+    try {
+        await updateRecipe(id, recipe);
+        res.status(200).json({ message: 'Recipe updated successfully' });
     } catch (err) {
-        console.error('Error fetching recipe:', err);
-        res.status(500).json({ message: 'Error fetching recipe' });
+        console.error('Error updating recipe:', err);
+        res.status(500).json({ message: 'Error updating recipe' });
     }
 });
 
-// List of all recipes by category/subcategory
-router.get('/recipes/category/:category', async(req, res) => {
-    try {
-        const recipes = await getRecipesByCategory(req.params.category);
-        res.json(recipes);
-    } catch (err) {
-        console.error('Error fetching recipes:', err);
-        res.status(500).json({ message: 'Error fetching recipes' });
-    }
-});
+// Delete a recipe
+router.delete('/recipes/:id', async(req, res) => {
+    const { id } = req.params;
 
-// List of recipes by a user (secure endpoint)
-router.get('/recipes/user/:userId', auth, async(req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid ObjectId' });
+    }
+
     try {
-        const recipes = await getRecipesByUser(req.params.userId);
-        res.json(recipes);
+        const result = await deleteRecipe(id);
+        if (result) {
+            res.status(200).json({ message: 'Recipe deleted successfully', result });
+        } else {
+            res.status(404).json({ message: 'Recipe not found' });
+        }
     } catch (err) {
-        console.error('Error fetching recipes:', err);
-        res.status(500).json({ message: 'Error fetching recipes' });
+        console.error('Error deleting recipe:', err);
+        res.status(500).json({ message: 'Error deleting recipe' });
     }
 });
 
