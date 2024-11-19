@@ -106,7 +106,6 @@
     <!-- Custom JS -->
     <script>
         $(document).ready(function() {
-            // Function to check if the user is authorized
             function isAuthorized() {
                 const token = localStorage.getItem('token');
                 return token !== null;
@@ -119,19 +118,7 @@
                             'Authorization': `Bearer ${token}`
                         }
                     })
-                    .then(response => response.json().then(data => ({
-                        status: response.status,
-                        body: data
-                    })))
-                    .then(({
-                        status,
-                        body
-                    }) => {
-                        if (status === 401 && body.msg === 'Authorization header missing or invalid') {
-                            $('#authModal').modal('show'); // Show authentication modal if token is not valid
-                        }
-                        return body;
-                    })
+                    .then(response => response.text())
                     .then(data => {
                         document.open();
                         document.write(data);
@@ -139,11 +126,16 @@
                     })
                     .catch(error => {
                         console.error('Error loading page:', error);
-
+                        $('#authModal').modal('show'); // Show authentication modal if token is not valid
                     });
             }
 
-            // Handle view recipes button click
+            if (isAuthorized()) {
+                $('#logoutBtn').show();
+            } else {
+                $('#logoutBtn').hide();
+            }
+
             $('#viewRecipesBtn').click(function() {
                 if (isAuthorized()) {
                     loadPage();
@@ -151,12 +143,6 @@
                     $('#authModal').modal('show');
                 }
             });
-            // Show or hide logout button based on authorization
-            if (isAuthorized()) {
-                $('#logoutBtn').show();
-            } else {
-                $('#logoutBtn').hide();
-            }
 
             $('#signupBtn').click(function() {
                 $('#signupModal').modal('show');
@@ -186,7 +172,8 @@
                         localStorage.setItem('token', result.token);
                         alert('Login successful!');
                         $('#loginModal').modal('hide');
-                        loadPage(); // Load page after successful login
+                        $('#logoutBtn').show();
+                        loadPage();
                     } else {
                         alert('Login failed: ' + result.msg);
                     }
@@ -233,17 +220,17 @@
                 window.location.href = '/auth/github';
             });
 
-            // Handle logout'
+
+            // Handle logout
             $('#logoutBtn').click(function() {
                 localStorage.removeItem('token');
                 alert('Logout successful!');
-                loadPage(); // Load page after successful logout
+                $('#logoutBtn').hide(); // Hide logout button after logout
+                window.location.href = '/'; // Redirect to login page
             });
-
-
-
         });
     </script>
+
 </body>
 
 </html>

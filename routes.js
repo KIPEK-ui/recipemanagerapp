@@ -10,7 +10,6 @@ const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GitHubStrategy = require('passport-github').Strategy;
-const { check, validationResult } = require('express-validator');
 const router = express.Router();
 const multer = require('multer');
 const mongoose = require('mongoose');
@@ -375,7 +374,7 @@ router.get('/auth/success', (req, res) => {
                     if (token) {
                         localStorage.setItem('token', token);
                         alert('Authentication successful!');
-                        window.location.href = '/home'; // Redirect to home page
+                        window.location.href = '/'; // Redirect to home page
                     } else {
                         alert('Authentication failed!');
                         window.location.href = '/'; // Redirect to login page

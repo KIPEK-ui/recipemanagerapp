@@ -10,9 +10,15 @@ const swaggerOptions = {
             description: 'API for managing recipes and users'
         },
         servers: [{
-            url: 'http://localhost:83',
-            description: 'Local server'
-        }],
+                url: 'http://localhost:85',
+                description: 'Local server'
+            },
+            {
+                url: 'https://recipemanagerapp.vercel.app',
+                description: 'Production server'
+            }
+
+        ],
         components: {
             securitySchemes: {
                 bearerAuth: {
