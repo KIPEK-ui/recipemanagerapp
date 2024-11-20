@@ -228,20 +228,20 @@
         }
 
         $(document).ready(function() {
-            function fetchRecipes() {
-                fetch('/recipes', {
+            function fetchRecipes(query = '') {
+                fetch(`/recipes?search=${query}`, {
                         method: 'GET',
                         credentials: 'include'
                     })
                     .then(response => response.json())
                     .then(data => {
+                        console.log('Fetched recipes:', data); // Debugging statement
                         const recipeList = $('#recipeList');
                         recipeList.empty();
                         const template = document.getElementById('recipeCardTemplate').content;
                         const userId = getUserId(); // Function to get the logged-in user's ID
                         data.forEach(recipe => {
                             const clone = document.importNode(template, true);
-                            console.log('Recipe image ID:', recipe.image); // Debugging statement
                             clone.querySelector('.card-img-top').src = `/images/${recipe.image._id}`;
                             clone.querySelector('.card-img-top').alt = recipe.name;
                             clone.querySelector('.card-title').textContent = recipe.name;
@@ -249,13 +249,13 @@
                             clone.querySelector('.card-ingredients').textContent = recipe.ingredients;
                             clone.querySelector('.card-instructions').textContent = recipe.instructions;
                             clone.querySelector('.card-user').textContent = `${recipe.firstName} ${recipe.lastName}`;
-                            if (recipe.user === userId) {
+                            if (recipe.user._id === userId) { // Ensure user ID comparison is correct
                                 clone.querySelector('.card-buttons').style.display = 'block';
                                 clone.querySelector('.update-btn').dataset.id = recipe._id;
                                 clone.querySelector('.update-btn').dataset.name = recipe.name;
                                 clone.querySelector('.update-btn').dataset.ingredients = recipe.ingredients;
                                 clone.querySelector('.update-btn').dataset.instructions = recipe.instructions;
-                                clone.querySelector('.update-btn').dataset.image = imageId;
+                                clone.querySelector('.update-btn').dataset.image = recipe.image;
                                 clone.querySelector('.update-btn').dataset.category = recipe.category;
                                 clone.querySelector('.delete-btn').dataset.id = recipe._id;
                             } else {
@@ -400,7 +400,8 @@
 
             // Handle search bar input
             $('#searchBar').on('input', function() {
-                fetchRecipes();
+                const query = $(this).val();
+                fetchRecipes(query);
             });
 
             // Initial fetch

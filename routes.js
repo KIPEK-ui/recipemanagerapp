@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
+const { User, Recipe, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -278,10 +278,16 @@ router.get('/users/:id', auth, async(req, res) => {
 });
 
 // Retrieve all recipes with pagination
+// Retrieve all recipes with optional search query
 router.get('/recipes', async(req, res) => {
-    const { page = 1, limit = 10 } = req.query;
+    const { search = '', page = 1, limit = 10 } = req.query;
+    const query = search ? { name: { $regex: search, $options: 'i' } } : {};
     try {
-        const recipes = await getAllRecipes(page, limit);
+        const recipes = await Recipe.find(query)
+            .populate('user')
+            .populate('image')
+            .skip((page - 1) * limit)
+            .limit(limit);
         res.status(200).json(recipes);
     } catch (err) {
         console.error('Error fetching recipes:', err);
