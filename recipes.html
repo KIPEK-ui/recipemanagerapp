@@ -248,13 +248,18 @@
                             clone.querySelector('.card-ingredients').textContent = recipe.ingredients;
                             clone.querySelector('.card-instructions').textContent = recipe.instructions;
                             clone.querySelector('.card-user').textContent = `${recipe.firstName} ${recipe.lastName}`;
-                            clone.querySelector('.update-btn').dataset.id = recipe._id;
-                            clone.querySelector('.update-btn').dataset.name = recipe.name;
-                            clone.querySelector('.update-btn').dataset.ingredients = recipe.ingredients;
-                            clone.querySelector('.update-btn').dataset.instructions = recipe.instructions;
-                            clone.querySelector('.update-btn').dataset.image = recipe.image;
-                            clone.querySelector('.update-btn').dataset.category = recipe.category;
-                            clone.querySelector('.delete-btn').dataset.id = recipe._id;
+                            if (recipe.user === userId) {
+                                clone.querySelector('.card-buttons').style.display = 'block';
+                                clone.querySelector('.update-btn').dataset.id = recipe._id;
+                                clone.querySelector('.update-btn').dataset.name = recipe.name;
+                                clone.querySelector('.update-btn').dataset.ingredients = recipe.ingredients;
+                                clone.querySelector('.update-btn').dataset.instructions = recipe.instructions;
+                                clone.querySelector('.update-btn').dataset.image = imageId;
+                                clone.querySelector('.update-btn').dataset.category = recipe.category;
+                                clone.querySelector('.delete-btn').dataset.id = recipe._id;
+                            } else {
+                                clone.querySelector('.card-buttons').style.display = 'none';
+                            }
                             recipeList.append(clone);
                         });
                     })
@@ -374,8 +379,10 @@
             });
 
             // Handle search bar input
+            // Handle search bar input
             $('#searchBar').on('input', function() {
-                fetchRecipes();
+                const query = $(this).val();
+                fetchRecipes(query);
             });
 
             // Initial fetch
