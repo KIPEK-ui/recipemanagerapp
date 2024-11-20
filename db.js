@@ -14,6 +14,7 @@ mongoose.connect(MONGOURL, {})
         console.error('Error connecting to MongoDB:', err);
     });
 
+
 // Define the Recipe schema
 const recipeSchema = new mongoose.Schema({
     name: { type: String, required: true },

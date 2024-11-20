@@ -289,8 +289,10 @@ router.get('/recipes', async(req, res) => {
     }
 });
 // Retrieve an image by ID
+// Serve images
 router.get('/images/:id', async(req, res) => {
     const { id } = req.params;
+    console.log('Fetching image with ID:', id); // Debugging statement
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'Invalid ObjectId' });
     }
@@ -323,6 +325,7 @@ router.post('/recipes', auth, upload.single('image'), async(req, res) => {
         try {
             const savedFile = await newFile.save();
             recipe.image = savedFile._id.toString(); // Convert ObjectId to string
+            console.log('Saved image ID:', recipe.image); // Debugging statement
         } catch (err) {
             console.error('Error saving file:', err);
             return res.status(500).json({ message: 'Error saving file' });
