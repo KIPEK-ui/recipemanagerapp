@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Recipe World , Make your own Recipe book with your own Recipes">
-    <meta name="keywords" content="HTML, CSS, JavaScript, favicon, Recipes,metadata">
+    <meta name="description" content="Recipe World, Make your own Recipe book with your own Recipes">
+    <meta name="keywords" content="HTML, CSS, JavaScript, favicon, Recipes, metadata">
     <meta name="author" content="Emmanuel Keter">
     <title>Recipe World</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -14,6 +14,11 @@
         .card {
             position: relative;
             overflow: hidden;
+        }
+        
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
         }
         
         .card-buttons {
@@ -67,7 +72,8 @@
             background-color: #fff;
         }
         
-        #preview {
+        #preview,
+        #updatePreview {
             max-height: 200px;
             object-fit: cover;
             display: none;
@@ -76,17 +82,39 @@
 </head>
 
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Recipe Manager App</h1>
-        <div class="text-center mt-3">
-            <input type="text" id="searchBar" class="form-control" placeholder="Search by category">
+    <section>
+        <div class="container mt-5">
+            <h1 class="text-center">Recipe Manager App</h1>
+            <div class="text-center mt-3">
+                <input type="text" id="searchBar" class="form-control" placeholder="Search by category">
+            </div>
+            <div id="recipes" class="mt-5">
+                <h2>All Recipes</h2>
+                <div id="recipeList" class="row"></div>
+                <button class="btn btn-primary mt-3" data-toggle="modal" data-target="#insertModal">Insert Recipe</button>
+            </div>
         </div>
-        <div id="recipes" class="mt-5">
-            <h2>All Recipes</h2>
-            <div id="recipeList" class="row"></div>
-            <button class="btn btn-primary mt-3" data-toggle="modal" data-target="#insertModal">Insert Recipe</button>
+    </section>
+
+    <!-- Card Template -->
+    <template id="recipeCardTemplate">
+    <div class="col-md-4">
+      <div class="card mb-3">
+        <div class="card-buttons">
+          <button class="btn btn-primary btn-sm update-btn" data-toggle="modal" data-target="#updateModal">Update</button>
+          <button class="btn btn-danger btn-sm delete-btn">Delete</button>
         </div>
+        <img src="" class="card-img-top" alt="">
+        <div class="card-body">
+          <h5 class="card-title"></h5>
+          <p class="card-text"><strong>Category:</strong> <span class="card-category"></span></p>
+          <p class="card-text"><strong>Ingredients:</strong> <span class="card-ingredients"></span></p>
+          <p class="card-text"><strong>Instructions:</strong> <span class="card-instructions"></span></p>
+          <p class="card-text"><strong>Created by:</strong> <span class="card-user"></span></p>
+        </div>
+      </div>
     </div>
+  </template>
 
     <!-- Insert Recipe Modal -->
     <div class="modal fade" id="insertModal" tabindex="-1" role="dialog" aria-labelledby="insertModalLabel" aria-hidden="true">
@@ -95,35 +123,43 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="insertModalLabel">Insert Recipe</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+            <span aria-hidden="true">×</span>
+          </button>
                 </div>
                 <div class="modal-body">
-                    <form id="insertForm">
+                    <form id="insertForm" enctype="multipart/form-data">
                         <div class="form-group">
-                            <label for="name">Recipe Name:</label>
-                            <input type="text" class="form-control" id="name" name="name" required>
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="ingredients">Ingredients:</label>
-                            <textarea class="form-control" id="ingredients" name="ingredients" rows="3" required></textarea>
+                            <label for="ingredients">Ingredients</label>
+                            <textarea id="ingredients" name="ingredients" class="form-control" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="instructions">Instructions:</label>
-                            <textarea class="form-control" id="instructions" name="instructions" rows="3" required></textarea>
+                            <label for="instructions">Instructions</label>
+                            <textarea id="instructions" name="instructions" class="form-control" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="category">Category:</label>
+                            <label for="category">Category</label>
                             <select class="form-control" id="category" name="category" required>
-                                <option value="Breakfast">Breakfast</option>
-                                <option value="Lunch">Lunch</option>
-                                <option value="Dinner">Dinner</option>
-                                <option value="Snacks">Snacks</option>
-                                <option value="Desserts">Desserts</option>
-                            </select>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Desserts">Desserts</option>
+              </select>
                         </div>
                         <div class="form-group">
-                            <label for="image">Upload Image:</label>
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="image">Image</label>
                             <input type="file" class="form-control" id="image" name="image" accept=".jpeg, .png, .jpg" required onchange="previewImage(event)">
                             <img id="preview" src="#" alt="Image Preview">
                         </div>
@@ -141,38 +177,38 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="updateModalLabel">Update Recipe</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
+            <span aria-hidden="true">×</span>
+          </button>
                 </div>
                 <div class="modal-body">
-                    <form id="updateForm">
+                    <form id="updateForm" enctype="multipart/form-data">
                         <input type="hidden" id="updateId" name="id">
                         <div class="form-group">
-                            <label for="updateName">Recipe Name:</label>
-                            <input type="text" class="form-control" id="updateName" name="name" required>
+                            <label for="updateName">Name</label>
+                            <input type="text" id="updateName" name="name" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="updateIngredients">Ingredients:</label>
-                            <textarea class="form-control" id="updateIngredients" name="ingredients" rows="3" required></textarea>
+                            <label for="updateIngredients">Ingredients</label>
+                            <textarea id="updateIngredients" name="ingredients" class="form-control" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="updateInstructions">Instructions:</label>
-                            <textarea class="form-control" id="updateInstructions" name="instructions" rows="3" required></textarea>
+                            <label for="updateInstructions">Instructions</label>
+                            <textarea id="updateInstructions" name="instructions" class="form-control" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="updateCategory">Category:</label>
+                            <label for="updateCategory">Category</label>
                             <select class="form-control" id="updateCategory" name="category" required>
-                                <option value="Breakfast">Breakfast</option>
-                                <option value="Lunch">Lunch</option>
-                                <option value="Dinner">Dinner</option>
-                                <option value="Snacks">Snacks</option>
-                                <option value="Desserts">Desserts</option>
-                            </select>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Desserts">Desserts</option>
+              </select>
                         </div>
                         <div class="form-group">
-                            <label for="updateImage">Upload Image:</label>
+                            <label for="updateImage">Image</label>
                             <input type="file" class="form-control" id="updateImage" name="image" accept=".jpeg, .png, .jpg" onchange="previewUpdateImage(event)">
-                            <img id="updatePreview" src="#" alt="Image Preview" style="display: none; max-height: 200px; object-fit: cover;">
+                            <img id="updatePreview" src="#" alt="Image Preview">
                         </div>
                         <button type="submit" class="btn btn-primary">Update</button>
                     </form>
@@ -180,24 +216,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Card Template -->
-    <template id="recipeCardTemplate">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-buttons">
-                    <button class="btn btn-primary btn-sm update-btn" data-toggle="modal" data-target="#updateModal">Update</button>
-                    <button class="btn btn-danger btn-sm delete-btn">Delete</button>
-                </div>
-                <img src="" class="card-img-top" alt="">
-                <div class="card-body">
-                    <h5 class="card-title"></h5>
-                    <p class="card-text"><strong>Ingredients:</strong> </p>
-                    <p class="card-text"><strong>Instructions:</strong> </p>
-                </div>
-            </div>
-        </div>
-    </template>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -215,60 +233,74 @@
         }
 
         $(document).ready(function() {
-            const token = localStorage.getItem('token');
-
             function fetchRecipes() {
-                const searchQuery = $('#searchBar').val().toLowerCase();
-                $.ajax({
-                    url: '/recipes',
-                    type: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    success: function(data) {
+                fetch('/recipes', {
+                        method: 'GET',
+                        credentials: 'include'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
                         const recipeList = $('#recipeList');
-                        recipeList.empty(); // Clear existing recipes
+                        recipeList.empty();
                         const template = document.getElementById('recipeCardTemplate').content;
-
                         data.forEach(recipe => {
-                            if (recipe.category.toLowerCase().includes(searchQuery)) {
-                                const clone = document.importNode(template, true);
-                                clone.querySelector('.card-img-top').src = `/images/${recipe.image}`;
-                                clone.querySelector('.card-img-top').alt = recipe.name;
-                                clone.querySelector('.card-title').textContent = recipe.name;
-                                clone.querySelector('.card-text').innerHTML = `<strong>Ingredients:</strong> ${recipe.ingredients}`;
-                                clone.querySelectorAll('.card-text')[1].innerHTML = `<strong>Instructions:</strong> ${recipe.instructions}`;
-                                clone.querySelector('.update-btn').setAttribute('data-id', recipe._id);
-                                clone.querySelector('.update-btn').setAttribute('data-name', recipe.name);
-                                clone.querySelector('.update-btn').setAttribute('data-ingredients', recipe.ingredients);
-                                clone.querySelector('.update-btn').setAttribute('data-instructions', recipe.instructions);
-                                clone.querySelector('.update-btn').setAttribute('data-image', recipe.image);
-                                clone.querySelector('.update-btn').setAttribute('data-category', recipe.category);
-                                clone.querySelector('.delete-btn').setAttribute('data-id', recipe._id);
-                                if (recipe.userId === localStorage.getItem('userId')) {
-                                    clone.querySelector('.card-buttons').style.display = 'block';
-                                }
-                                recipeList.append(clone);
-                            }
+                            const clone = document.importNode(template, true);
+                            clone.querySelector('.card-img-top').src = `/images/${recipe.image}`;
+                            clone.querySelector('.card-img-top').alt = recipe.name;
+                            clone.querySelector('.card-title').textContent = recipe.name;
+                            clone.querySelector('.card-category').textContent = recipe.category;
+                            clone.querySelector('.card-ingredients').textContent = recipe.ingredients;
+                            clone.querySelector('.card-instructions').textContent = recipe.instructions;
+                            clone.querySelector('.card-user').textContent = `${recipe.firstName} ${recipe.lastName}`;
+                            clone.querySelector('.update-btn').dataset.id = recipe._id;
+                            clone.querySelector('.update-btn').dataset.name = recipe.name;
+                            clone.querySelector('.update-btn').dataset.ingredients = recipe.ingredients;
+                            clone.querySelector('.update-btn').dataset.instructions = recipe.instructions;
+                            clone.querySelector('.update-btn').dataset.image = recipe.image;
+                            clone.querySelector('.update-btn').dataset.category = recipe.category;
+                            clone.querySelector('.delete-btn').dataset.id = recipe._id;
+                            recipeList.append(clone);
                         });
-                    },
-                    error: function() {
-                        alert('Error fetching recipes.');
-                    }
-                });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching recipes:', error);
+                    });
+            }
+            // Fetch user info and populate the insert form
+            function fetchUserInfo() {
+                fetch('/users/me', {
+                        method: 'GET',
+                        credentials: 'include'
+                    })
+                    .then(response => response.json())
+                    .then(user => {
+                        $('#firstName').val(user.firstName);
+                        $('#lastName').val(user.lastName);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user info:', error);
+                    });
             }
 
-            // Handle form submission
+            // Handle insert form submission
             $('#insertForm').on('submit', function(event) {
                 event.preventDefault();
+                const name = $('#name').val();
+                const ingredients = $('#ingredients').val();
+                const instructions = $('#instructions').val();
+                const category = $('#category').val();
+                const firstName = $('#firstName').val();
+                const lastName = $('#lastName').val();
+                const image = $('#image')[0].files[0];
+                if (!name || !ingredients || !instructions || !category || !firstName || !lastName || !image) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
                 const formData = new FormData(this);
-
                 $.ajax({
                     url: '/recipes',
                     type: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
+                    credentials: 'include',
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -278,7 +310,8 @@
                         $('#insertForm')[0].reset();
                         fetchRecipes();
                     },
-                    error: function() {
+                    error: function(error) {
+                        console.error('Insert error:', error);
                         alert('Error inserting recipe.');
                     }
                 });
@@ -289,13 +322,10 @@
                 event.preventDefault();
                 const id = $('#updateId').val();
                 const formData = new FormData(this);
-
                 $.ajax({
                     url: `/recipes/${id}`,
-                    type: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
+                    type: 'PATCH',
+                    credentials: 'include',
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -314,14 +344,11 @@
             // Handle delete button click
             $(document).on('click', '.delete-btn', function() {
                 const id = $(this).data('id');
-
                 if (confirm('Are you sure you want to delete this recipe?')) {
                     $.ajax({
                         url: `/recipes/${id}`,
                         type: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
+                        credentials: 'include',
                         success: function(response) {
                             alert('Recipe deleted successfully!');
                             fetchRecipes();
@@ -341,14 +368,12 @@
                 const instructions = $(this).data('instructions');
                 const image = $(this).data('image');
                 const category = $(this).data('category');
-
                 $('#updateId').val(id);
                 $('#updateName').val(name);
                 $('#updateIngredients').val(ingredients);
                 $('#updateInstructions').val(instructions);
                 $('#updateCategory').val(category);
                 $('#updatePreview').attr('src', `/images/${image}`).show();
-
                 $('#updateModal').modal('show');
             });
 
@@ -359,6 +384,7 @@
 
             // Initial fetch
             fetchRecipes();
+            fetchUserInfo();
         });
     </script>
 </body>

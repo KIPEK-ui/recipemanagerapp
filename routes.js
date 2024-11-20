@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { User, Recipe, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
+const { User, insertUser, insertRecipe, getAllRecipes, getRecipeById, getRecipesByCategory, getRecipesByUser, updateRecipe, deleteRecipe } = require('./db');
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -12,6 +12,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const GitHubStrategy = require('passport-github').Strategy;
 const router = express.Router();
 const mongoose = require('mongoose');
+const multer = require('multer');
 
 // Define the schema for storing files in MongoDB
 const fileSchema = new mongoose.Schema({
@@ -19,25 +20,29 @@ const fileSchema = new mongoose.Schema({
     data: Buffer,
     contentType: String,
 });
-
 const File = mongoose.model('File', fileSchema);
 
+// Multer configuration
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
 // Middleware to protect routes
-function auth(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
-        console.log('Received token:', token); // Log the token for debugging
-        jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-            if (err) {
-                console.error('Token verification error:', err); // Log the error
+async function auth(req, res, next) {
+    const token = req.cookies.token;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(decoded.user._id);
+            if (!user) {
                 return res.status(403).json({ msg: 'Token is not valid' });
             }
             req.user = user;
             next();
-        });
+        } catch (err) {
+            return res.status(403).json({ msg: 'Token is not valid' });
+        }
     } else {
-        res.status(401).json({ msg: 'Authorization header missing or invalid' });
+        res.status(401).json({ msg: 'Authorization cookie missing or invalid' });
     }
 }
 
@@ -46,10 +51,9 @@ const opts = {
     jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     secretOrKey: process.env.JWT_SECRET
 };
-
 passport.use(new JwtStrategy(opts, async(jwt_payload, done) => {
     try {
-        const user = await User.findById(jwt_payload.id);
+        const user = await User.findById(jwt_payload._id);
         if (user) {
             return done(null, user);
         } else {
@@ -74,6 +78,8 @@ passport.use(new GoogleStrategy({
                 googleId: profile.id,
                 email: profile.emails[0].value,
                 password: randomPassword,
+                firstName: profile.name.givenName,
+                lastName: profile.name.familyName,
                 googleAccessToken: accessToken,
                 googleRefreshToken: refreshToken
             });
@@ -119,7 +125,7 @@ passport.use(new GitHubStrategy({
 }));
 
 passport.serializeUser((user, done) => {
-    done(null, user.id);
+    done(null, user._id);
 });
 
 passport.deserializeUser(async(id, done) => {
@@ -130,8 +136,6 @@ passport.deserializeUser(async(id, done) => {
         done(err, false);
     }
 });
-
-// Insecure endpoints
 
 // Serve the favicon
 router.get('/favicon.ico', (req, res) => {
@@ -151,67 +155,6 @@ router.get('/', (req, res) => {
     });
 });
 
-// Retrieve all recipes
-router.get('/recipes', async(req, res) => {
-    try {
-        const recipes = await getAllRecipes();
-        res.status(200).json(recipes);
-    } catch (err) {
-        console.error('Error fetching recipes:', err);
-        res.status(500).json({ message: 'Error fetching recipes' });
-    }
-});
-
-// Retrieve an image by ID
-router.get('/images/:id', async(req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid ObjectId' });
-    }
-
-    try {
-        const file = await File.findById(id);
-        if (!file) {
-            return res.status(404).json({ message: 'File not found' });
-        }
-        res.set('Content-Type', file.contentType);
-        res.send(file.data);
-    } catch (err) {
-        console.error('Error fetching file:', err);
-        res.status(500).json({ message: 'Error fetching file' });
-    }
-});
-
-// Recipe information by id
-router.get('/recipes/:id', async(req, res) => {
-    try {
-        const recipe = await getRecipeById(req.params.id);
-        if (!recipe) {
-            return res.status(404).json({ message: 'Recipe not found' });
-        }
-        res.json(recipe);
-    } catch (err) {
-        console.error('Error fetching recipe:', err);
-        res.status(500).json({ message: 'Error fetching recipe' });
-    }
-});
-
-// List of all recipes by category/subcategory
-router.get('/recipes/category/:category', async(req, res) => {
-    try {
-        const recipes = await getRecipesByCategory(req.params.category);
-        res.json(recipes);
-    } catch (err) {
-        console.error('Error fetching recipes:', err);
-        res.status(500).json({ message: 'Error fetching recipes' });
-    }
-});
-
-// Secure endpoints
-
-// Use the auth middleware for protected routes
-
 // Serve the home page
 router.get('/home', auth, (req, res) => {
     fs.readFile(path.join(__dirname, 'recipes.html'), (err, data) => {
@@ -225,11 +168,95 @@ router.get('/home', auth, (req, res) => {
     });
 });
 
+// Google Authentication
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
+    const user = req.user;
+    const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName } };
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+        if (err) throw err;
+        res.cookie('token', token, { httpOnly: true });
+        res.redirect('/home');
+    });
+});
+
+// GitHub Authentication
+router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+router.get('/auth/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
+    const user = req.user;
+    const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName } };
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+        if (err) throw err;
+        res.cookie('token', token, { httpOnly: true });
+        res.redirect('/home');
+    });
+});
+
+// Authentication success route
+// Authentication success route (INSECURE)
+router.get('/auth/success', (req, res) => {
+    const { token, userId, firstName, lastName } = req.query;
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Authentication Success</title>
+        </head>
+        <body>
+            <script>
+                (function() {
+                    const token = "${token}";
+                    const userId = "${userId}";
+                    const firstName = "${firstName}";
+                    const lastName = "${lastName}";
+                    if (token) {
+                        localStorage.setItem('token', token);
+                        localStorage.setItem('userId', userId);
+                        localStorage.setItem('firstName', firstName);
+                        localStorage.setItem('lastName', lastName);
+                        alert('Authentication successful!');
+                        window.location.href = '/home'; // Redirect to home page
+                    } else {
+                        alert('Authentication failed!');
+                        window.location.href = '/'; // Redirect to login page
+                    }
+                })();
+            </script>
+        </body>
+        </html>
+    `;
+    res.send(htmlContent);
+});
+
+
+// Logout route
+router.post('/logout', (req, res) => {
+    res.clearCookie('token');
+    res.json({ msg: 'Logged out successfully' });
+});
+
 // List of all users
 router.get('/users', auth, async(req, res) => {
     try {
         const users = await User.find();
         res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// Fetch logged-in user's information
+router.get('/users/me', auth, async(req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json(user);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -250,153 +277,62 @@ router.get('/users/:id', auth, async(req, res) => {
     }
 });
 
-// List of all users by gender (assuming gender field exists)
-router.get('/users/gender/:gender', auth, async(req, res) => {
+// Retrieve all recipes with pagination
+router.get('/recipes', async(req, res) => {
+    const { page = 1, limit = 10 } = req.query;
     try {
-        const users = await User.find({ gender: req.params.gender });
-        res.json(users);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
-    }
-});
-
-// List of recipes by a user (secure endpoint)
-router.get('/recipes/user/:userId', auth, async(req, res) => {
-    try {
-        const recipes = await getRecipesByUser(req.params.userId);
-        res.json(recipes);
+        const recipes = await getAllRecipes(page, limit);
+        res.status(200).json(recipes);
     } catch (err) {
         console.error('Error fetching recipes:', err);
         res.status(500).json({ message: 'Error fetching recipes' });
     }
 });
-// User registration
-router.post('/register', async(req, res) => {
-    const { email, password } = req.body;
-    try {
-        let user = await User.findOne({ email });
-        if (user) {
-            return res.status(400).json({ msg: 'User already exists' });
-        }
-
-        user = await insertUser(email, password);
-
-        const payload = { user: { id: user.id } };
-
-        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+// Retrieve an image by ID
+router.get('/images/:id', async(req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid ObjectId' });
     }
-});
-
-// User login
-router.post('/login', async(req, res) => {
-    const { email, password } = req.body;
     try {
-        let user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
+        const file = await File.findById(id);
+        if (!file) {
+            return res.status(404).json({ message: 'File not found' });
         }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
-
-        const payload = { user: { id: user.id } };
-
-        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
+        res.set('Content-Type', file.contentType);
+        res.send(file.data);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        console.error('Error fetching file:', err);
+        res.status(500).json({ message: 'Error fetching file' });
     }
-});
-
-// Google Authentication
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-router.get('/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
-    const payload = { user: { id: req.user.id } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-        if (err) throw err;
-        res.redirect(`/auth/success?token=${token}`);
-    });
-});
-
-// GitHub Authentication
-router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
-
-router.get('/auth/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
-    const payload = { user: { id: req.user.id } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-        if (err) throw err;
-        res.redirect(`/auth/success?token=${token}`);
-    });
-});
-
-// Authentication success route
-router.get('/auth/success', (req, res) => {
-    const token = req.query.token;
-    const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Authentication Success</title>
-        </head>
-        <body>
-            <script>
-                (function() {
-                    const token = "${token}";
-                    if (token) {
-                        localStorage.setItem('token', token);
-                        alert('Authentication successful!');
-                        window.location.href = '/'; // Redirect to home page
-                    } else {
-                        alert('Authentication failed!');
-                        window.location.href = '/'; // Redirect to login page
-                    }
-                })();
-            </script>
-        </body>
-        </html>
-    `;
-    res.send(htmlContent);
 });
 
 // Add a new recipe
-router.post('/recipes', async(req, res) => {
-    const { name, ingredients, instructions, image, category } = req.body;
+router.post('/recipes', auth, upload.single('image'), async(req, res) => {
+    const { name, ingredients, instructions, category, firstName, lastName } = req.body;
+    const userId = req.user.id;
+    const recipe = { name, ingredients, instructions, category, firstName, lastName, user: userId };
 
-    const recipe = { name, ingredients, instructions, category };
-
-    if (image) {
+    if (req.file) {
+        const imageFile = req.file;
         const newFile = new File({
-            name: image.name,
-            data: Buffer.from(image.data, 'base64'),
-            contentType: image.contentType,
+            name: imageFile.originalname,
+            data: imageFile.buffer,
+            contentType: imageFile.mimetype,
         });
-
         try {
-            await newFile.save();
-            recipe.image = newFile._id;
+            const savedFile = await newFile.save();
+            recipe.image = savedFile._id.toString(); // Convert ObjectId to string
         } catch (err) {
             console.error('Error saving file:', err);
             return res.status(500).json({ message: 'Error saving file' });
         }
+    } else {
+        return res.status(400).json({ message: 'Image is required' });
     }
 
     try {
-        await insertRecipe(recipe);
+        await insertRecipe(recipe, userId);
         res.status(200).json({ message: 'Recipe inserted successfully' });
     } catch (err) {
         console.error('Error inserting recipe:', err);
@@ -405,26 +341,22 @@ router.post('/recipes', async(req, res) => {
 });
 
 // Update a recipe
-router.post('/recipes/:id', async(req, res) => {
+router.patch('/recipes/:id', auth, upload.single('image'), async(req, res) => {
     const { id } = req.params;
-    const { name, ingredients, instructions, image, category } = req.body;
+    const { name, ingredients, instructions, category } = req.body;
+    const userId = req.user.id;
+    const recipe = { name, ingredients, instructions, category, user: userId };
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid ObjectId' });
-    }
-
-    const recipe = { name, ingredients, instructions, category };
-
-    if (image) {
+    if (req.file) {
+        const imageFile = req.file;
         const newFile = new File({
-            name: image.name,
-            data: Buffer.from(image.data, 'base64'),
-            contentType: image.contentType,
+            name: imageFile.originalname,
+            data: imageFile.buffer,
+            contentType: imageFile.mimetype,
         });
-
         try {
-            await newFile.save();
-            recipe.image = newFile._id;
+            const savedFile = await newFile.save();
+            recipe.image = savedFile._id.toString(); // Convert ObjectId to string
         } catch (err) {
             console.error('Error saving file:', err);
             return res.status(500).json({ message: 'Error saving file' });
@@ -432,8 +364,11 @@ router.post('/recipes/:id', async(req, res) => {
     }
 
     try {
-        await updateRecipe(id, recipe);
-        res.status(200).json({ message: 'Recipe updated successfully' });
+        const updatedRecipe = await updateRecipe(id, recipe, userId);
+        if (!updatedRecipe) {
+            return res.status(404).json({ message: 'Recipe not found' });
+        }
+        res.status(200).json({ message: 'Recipe updated successfully', updatedRecipe });
     } catch (err) {
         console.error('Error updating recipe:', err);
         res.status(500).json({ message: 'Error updating recipe' });
@@ -441,24 +376,19 @@ router.post('/recipes/:id', async(req, res) => {
 });
 
 // Delete a recipe
-router.delete('/recipes/:id', async(req, res) => {
+router.delete('/recipes/:id', auth, async(req, res) => {
     const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid ObjectId' });
-    }
+    const userId = req.user.id;
 
     try {
-        const result = await deleteRecipe(id);
-        if (result) {
-            res.status(200).json({ message: 'Recipe deleted successfully', result });
-        } else {
-            res.status(404).json({ message: 'Recipe not found' });
+        const result = await deleteRecipe(id, userId);
+        if (!result) {
+            return res.status(404).json({ message: 'Recipe not found' });
         }
+        res.status(200).json({ message: 'Recipe deleted successfully', result });
     } catch (err) {
         console.error('Error deleting recipe:', err);
         res.status(500).json({ message: 'Error deleting recipe' });
     }
 });
-
 module.exports = router;
