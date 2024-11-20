@@ -87,6 +87,7 @@
                 <h2>All Recipes</h2>
                 <div id="recipeList" class="row"></div>
                 <button class="btn btn-primary mt-3" data-toggle="modal" data-target="#insertModal">Insert Recipe</button>
+                <button class="btn btn-danger mt-3" id="logoutBtn">Logout</button>
             </div>
         </div>
     </section>
@@ -396,6 +397,24 @@
                 $('#updateCategory').val(category);
                 $('#updatePreview').attr('src', `/images/${image}`).show();
                 $('#updateModal').modal('show');
+            });
+            // Handle logout button click
+            $('#logoutBtn').click(function() {
+                fetch('/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            alert('Logged out successfully!');
+                            window.location.href = '/';
+                        } else {
+                            alert('Logout failed!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error logging out:', error);
+                    });
             });
 
             // Handle search bar input
