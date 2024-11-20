@@ -238,6 +238,7 @@
                         const recipeList = $('#recipeList');
                         recipeList.empty();
                         const template = document.getElementById('recipeCardTemplate').content;
+                        const userId = getUserId(); // Function to get the logged-in user's ID
                         data.forEach(recipe => {
                             const clone = document.importNode(template, true);
                             console.log('Recipe image ID:', recipe.image); // Debugging statement
@@ -267,6 +268,24 @@
                         console.error('Error fetching recipes:', error);
                     });
             }
+
+            function getUserId() {
+                // Fetch the logged-in user's ID from the server
+                let userId = null;
+                $.ajax({
+                    url: '/users/me',
+                    type: 'GET',
+                    async: false,
+                    credentials: 'include',
+                    success: function(user) {
+                        userId = user._id;
+                    },
+                    error: function(error) {
+                        console.error('Error fetching user info:', error);
+                    }
+                });
+                return userId;
+            }
             // Fetch user info and populate the insert form
             function fetchUserInfo() {
                 fetch('/users/me', {
@@ -277,6 +296,7 @@
                     .then(user => {
                         $('#firstName').val(user.firstName);
                         $('#lastName').val(user.lastName);
+
                     })
                     .catch(error => {
                         console.error('Error fetching user info:', error);
@@ -379,10 +399,8 @@
             });
 
             // Handle search bar input
-            // Handle search bar input
             $('#searchBar').on('input', function() {
-                const query = $(this).val();
-                fetchRecipes(query);
+                fetchRecipes();
             });
 
             // Initial fetch

@@ -277,16 +277,11 @@ router.get('/users/:id', auth, async(req, res) => {
     }
 });
 
-// Retrieve all recipes with optional search query
+// Retrieve all recipes with pagination
 router.get('/recipes', async(req, res) => {
-    const { search = '', page = 1, limit = 10 } = req.query;
-    const query = search ? { name: { $regex: search, $options: 'i' } } : {};
+    const { page = 1, limit = 10 } = req.query;
     try {
-        const recipes = await Recipe.find(query)
-            .populate('user')
-            .populate('image')
-            .skip((page - 1) * limit)
-            .limit(limit);
+        const recipes = await getAllRecipes(page, limit);
         res.status(200).json(recipes);
     } catch (err) {
         console.error('Error fetching recipes:', err);
