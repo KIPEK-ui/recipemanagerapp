@@ -16,6 +16,7 @@
         }
         
         .btn {
+            background-color: #a52;
             padding: 8px 14px;
             cursor: pointer;
             border: 2px solid #0f0f0f;
@@ -26,9 +27,7 @@
         .btn:hover {
             box-shadow: 3px 3px white, 6px 6px 0 0 #0f0f0f;
             transform: translate(-2px, -2px);
-        }
-        
-        .btnhero:hover {
+            background-color: transparent;
             box-shadow: 4px 4px 0 0 #a52;
             transform: translate(-4px, -4px);
         }
@@ -246,7 +245,7 @@
             <div class="welcome-message">
               <p class="text-center">Welcome to the Recipe<span style="color: #a52;">World!</span></p>
               <div class="text-center">
-                <button class="btn btnhero" id="viewRecipesBtn" onclick="clicked()">View Recipes</button>
+                <button class="btn" id="viewRecipesBtn" onclick="clicked()">View Recipes</button>
               </div>
             </div>
           </div>
@@ -266,8 +265,8 @@
           </button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary" id="loginBtn">Login</button>
-                    <button class="btn btn-secondary" id="signupBtn">Sign Up</button>
+                    <button class="btn" id="loginBtn">Login</button>
+                    <button class="btn" id="signupBtn">Sign Up</button>
                 </div>
             </div>
         </div>
@@ -284,8 +283,8 @@
           </button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-danger mt-2" id="googleLogin">Login with Google</button>
-                    <button class="btn btn-dark mt-2" id="githubLogin">Login with GitHub</button>
+                    <button class="btn mt-2" id="googleLogin">Login with Google</button>
+                    <button class="btn mt-2" id="githubLogin">Login with GitHub</button>
                 </div>
             </div>
         </div>
@@ -302,8 +301,8 @@
           </button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-danger mt-2" id="googleSignup">Sign Up with Google</button>
-                    <button class="btn btn-dark mt-2" id="githubSignup">Sign Up with GitHub</button>
+                    <button class="btn mt-2" id="googleSignup">Sign Up with Google</button>
+                    <button class="btn mt-2" id="githubSignup">Sign Up with GitHub</button>
                 </div>
             </div>
         </div>
