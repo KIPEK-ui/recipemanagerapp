@@ -24,6 +24,17 @@
             animation: typing 3s steps(22), blink-caret 1s step-end infinite alternate-reverse;
         }
         
+        .card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-img-top {
+            object-fit: fill;
+            height: 250px;
+            width: auto;
+        }
+        
         @keyframes typing {
             from {
                 width: 0;
@@ -52,10 +63,21 @@
                     <button class="btn btn-danger" id="logoutBtn" style="display: none;">Logout</button>
                 </div>
             </div>
-
-
         </div>
     </section>
+    <section>
+        <div class="container mt-5">
+            <h2>All Recipes</h2>
+            <div id="recipeList" class="row"></div>
+        </div>
+    </section>
+    <template id="recipeTemplate">
+        <div class="col-md-4">
+          <div class="card mb-3">
+            <img src="" class="card-img-top" alt="" height="100%">
+          </div>
+        </div>
+      </template>
 
     <!-- Authentication Modal -->
     <div class="modal fade" id="authModal" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true">
@@ -135,11 +157,28 @@
                     });
             }
 
-            if (isAuthorized()) {
-                $('#logoutBtn').show();
-            } else {
-                $('#logoutBtn').hide();
+            function fetchRecipes() {
+                fetch(`/recipes`, {
+                        method: 'GET',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Fetched recipes:', data); // Debugging statement
+                        const recipeList = $('#recipeList');
+                        recipeList.empty();
+                        const template = document.getElementById('recipeTemplate').content;
+                        data.forEach(recipe => {
+                            const clone = document.importNode(template, true);
+                            clone.querySelector('.card-img-top').src = `/images/${recipe.image._id}`;
+                            clone.querySelector('.card-img-top').alt = recipe.name;
+                            recipeList.append(clone);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching recipes:', error);
+                    });
             }
+
 
             $('#viewRecipesBtn').click(function() {
                 if (isAuthorized()) {
@@ -182,6 +221,7 @@
                         console.error('Error logging out:', error);
                     });
             });
+            fetchRecipes()
         });
     </script>
 </body>
