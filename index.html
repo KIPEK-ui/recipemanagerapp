@@ -14,17 +14,15 @@
         .typewriter {
             display: flex;
             justify-content: center;
-            flex-direction: column;
         }
         
         .typewriter p {
             font-family: monospace;
             font-size: 1.5rem;
-            /*margin-inline: auto;*/
             overflow: hidden;
             white-space: nowrap;
-            border-right: 1px solid;
-            animation: typing 3s steps(22, end), blink-caret 0.5s step-end infinite;
+            border-right: 1px solid #000;
+            animation: typing 3s steps(22), blink-caret 1s step-end infinite alternate-reverse;
         }
         
         @keyframes typing {
@@ -37,11 +35,8 @@
         }
         
         @keyframes blink-caret {
-            from {
+            50% {
                 border-color: transparent;
-            }
-            to {
-                border-color: #333;
             }
         }
     </style>
@@ -50,12 +45,16 @@
 <body>
     <section>
         <div class="container mt-5 typewriter">
-            <h1 class="text-center">Recipe World</h1>
-            <p class="text-center ">Welcome to the Recipe World!</p>
-            <div class="text-center">
-                <button class="btn btn-primary" id="viewRecipesBtn">View Recipes</button>
-                <button class="btn btn-danger" id="logoutBtn" style="display: none;">Logout</button>
+            <div class="">
+                <h1 class="text-center">Recipe World</h1>
+                <p class="text-center ">Welcome to the Recipe World!</p>
+                <div class="text-center">
+                    <button class="btn btn-primary" id="viewRecipesBtn">View Recipes</button>
+                    <button class="btn btn-danger" id="logoutBtn" style="display: none;">Logout</button>
+                </div>
             </div>
+
+
         </div>
     </section>
 
