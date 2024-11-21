@@ -15,6 +15,19 @@
             display: flex;
         }
         
+        .btn {
+            padding: 8px 14px;
+            cursor: pointer;
+            border: 2px solid #0f0f0f;
+            box-shadow: 2px 2px 0 0 white, 4px 4px 0 0 #0f0f0f;
+            transition-duration: 200ms;
+        }
+        
+        .btn:hover {
+            box-shadow: 3px 3px white, 6px 6px 0 0 #0f0f0f;
+            transform: translate(-2px, -2px);
+        }
+        
         .centered {
             justify-content: center;
             align-items: center;
@@ -112,7 +125,7 @@
             <div class="">
                 <p class="text-center ">Welcome to the Recipe<span style="color: #a52;">World!</span> </p>
                 <div class="text-center">
-                    <button class="btn btn-primary" id="viewRecipesBtn">View Recipes</button>
+                    <button class="btn" id="viewRecipesBtn">View Recipes</button>
                 </div>
             </div>
         </div>
