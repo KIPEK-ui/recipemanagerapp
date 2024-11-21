@@ -80,9 +80,36 @@
             transition-duration: 200ms;
         }
         
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(224, 118, 4, 0.6);
+            /* Semi-transparent background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .card:hover .card-overlay {
+            opacity: 1;
+        }
+        
+        .card-text {
+            font-family: monospace;
+            color: black;
+            font-weight: 400px;
+            font-size: 2.5rem;
+        }
+        
         .card :hover {
             box-shadow: 4px 4px 0 0 #a52;
             transform: translate(-4px, -4px);
+            background-color: rgb(255, 255, 255, 0.4);
         }
         
         .card img {
@@ -232,6 +259,9 @@
     <template id="recipeTemplate">
         <div class="col-md-4">
           <div class="card mb-3">
+            <div class="card-overlay">
+                <p class="card-text"></p>
+              </div>
             <img src="" class="card-img-top" alt="">
           </div>
         </div>
@@ -351,6 +381,7 @@
                             const clone = document.importNode(template, true);
                             clone.querySelector('.card-img-top').src = `/images/${recipe.image._id}`;
                             clone.querySelector('.card-img-top').alt = recipe.name;
+                            clone.querySelector('.card-text').textContent = recipe.name;
                             recipeList.append(clone);
                         });
                         initializeImageSlider(data);
