@@ -13,10 +13,14 @@
     <style>
         .typewriter {
             display: flex;
+        }
+        
+        .centered {
             justify-content: center;
         }
         
-        .typewriter p {
+        .typewriter p,
+        h2 {
             font-family: monospace;
             overflow: hidden;
             white-space: nowrap;
@@ -54,7 +58,7 @@
 
 <body>
     <section>
-        <div class="container mt-5 typewriter">
+        <div class="container mt-5 typewriter centered">
             <div class="">
                 <h1 class="text-center">Recipe World</h1>
                 <p class="text-center ">Welcome to the Recipe World!</p>
@@ -66,8 +70,13 @@
     </section>
     <section>
         <div class="container mt-5">
-            <h2>Featured Recipes 😍</h2>
-            <div id="recipeList" class="row"></div>
+            <div>
+                <div class="typewriter">
+                    <h2>Featured Recipes 😍</h2>
+                </div>
+                <div id="recipeList" class="row"></div>
+            </div>
+
         </div>
     </section>
     <template id="recipeTemplate">
