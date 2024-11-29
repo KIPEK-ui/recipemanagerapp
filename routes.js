@@ -68,9 +68,11 @@ passport.use(new JwtStrategy(opts, async(jwt_payload, done) => {
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: '/auth/google/callback'
+    callbackURL: '/auth/google/callback',
+    scope: ['profile', 'email', 'https://www.googleapis.com/auth/userinfo.profile']
 }, async(accessToken, refreshToken, profile, done) => {
     try {
+        console.log('Google profile:', profile); // Debugging statement
         let user = await User.findOne({ googleId: profile.id });
         if (!user) {
             const randomPassword = crypto.randomBytes(16).toString('hex');
@@ -79,9 +81,7 @@ passport.use(new GoogleStrategy({
                 email: profile.emails[0].value,
                 password: randomPassword,
                 firstName: profile.name.givenName,
-                lastName: profile.name.familyName,
-                googleAccessToken: accessToken,
-                googleRefreshToken: refreshToken
+                lastName: profile.name.familyName
             });
             await user.save();
         } else {
@@ -99,9 +99,11 @@ passport.use(new GoogleStrategy({
 passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: '/auth/github/callback'
+    callbackURL: '/auth/github/callback',
+    scope: ['user:email', 'read:user'] // Ensure this scope is included to get user profile information
 }, async(accessToken, refreshToken, profile, done) => {
     try {
+        console.log('GitHub profile:', profile); // Debugging statement
         let user = await User.findOne({ githubId: profile.id });
         if (!user) {
             const randomPassword = crypto.randomBytes(16).toString('hex');
@@ -109,13 +111,15 @@ passport.use(new GitHubStrategy({
                 githubId: profile.id,
                 email: profile.emails[0].value,
                 password: randomPassword,
-                githubAccessToken: accessToken,
-                githubRefreshToken: refreshToken
+                firstName: profile.name ? profile.name.split(' ')[0] : '',
+                lastName: profile.name ? profile.name.split(' ')[1] : '',
+                gender: profile.gender // Ensure gender is being saved
             });
             await user.save();
         } else {
             user.githubAccessToken = accessToken;
             user.githubRefreshToken = refreshToken;
+            user.gender = profile.gender; // Ensure gender is being updated
             await user.save();
         }
         return done(null, user);
@@ -169,64 +173,128 @@ router.get('/home', auth, (req, res) => {
 });
 
 // Google Authentication
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/userinfo.profile'] }));
 
 router.get('/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
     const user = req.user;
-    const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-        if (err) throw err;
-        res.cookie('token', token, { httpOnly: true });
-        res.redirect('/home');
-    });
+    if (!user.gender) {
+        // Redirect to a page where the user can enter their gender
+        res.redirect(`/auth/complete-profile?userId=${user.id}`);
+    } else {
+        const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName, gender: user.gender } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) {
+                console.error('JWT sign error:', err); // Log the error
+                return res.status(500).json({ message: 'Something went wrong!' });
+            }
+            res.cookie('token', token, { httpOnly: true });
+            res.redirect('/home');
+        });
+    }
 });
 
 // GitHub Authentication
-router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+router.get('/auth/github', passport.authenticate('github', { scope: ['user:email', 'read:user'] }));
+
 router.get('/auth/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
     const user = req.user;
-    const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-        if (err) throw err;
-        res.cookie('token', token, { httpOnly: true });
-        res.redirect('/home');
-    });
+    if (!user.gender) {
+        // Redirect to a page where the user can enter their gender
+        res.redirect(`/auth/complete-profile?userId=${user.id}`);
+    } else {
+        const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName, gender: user.gender } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) throw err;
+            res.cookie('token', token, { httpOnly: true });
+            res.redirect('/home');
+        });
+    }
+});
+router.get('/auth/complete-profile', (req, res) => {
+    const { userId } = req.query;
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Complete Profile</title>
+    </head>
+    <body>
+      <form action="/auth/complete-profile" method="POST">
+        <input type="hidden" name="userId" value="${userId}">
+        <label for="gender">Gender:</label>
+        <select name="gender" required>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+        <button type="submit">Submit</button>
+      </form>
+    </body>
+    </html>
+    `;
+    res.send(htmlContent);
+});
+
+router.post('/auth/complete-profile', async(req, res) => {
+    const { userId, gender } = req.body;
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        user.gender = gender;
+        await user.save();
+        const payload = { user: { _id: user.id, firstName: user.firstName, lastName: user.lastName, gender: user.gender } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) throw err;
+            res.cookie('token', token, { httpOnly: true });
+            res.redirect('/home');
+        });
+    } catch (err) {
+        console.error('Error completing profile:', err);
+        res.status(500).json({ msg: 'Error completing profile' });
+    }
 });
 
 // Authentication success route
 // Authentication success route (INSECURE)
+// Authentication success route
 router.get('/auth/success', (req, res) => {
-    const { token, userId, firstName, lastName } = req.query;
+    const { token, userId, firstName, lastName, gender } = req.query; // Include gender in the query parameters
     const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Authentication Success</title>
-        </head>
-        <body>
-            <script>
-                (function() {
-                    const token = "${token}";
-                    const userId = "${userId}";
-                    const firstName = "${firstName}";
-                    const lastName = "${lastName}";
-                    if (token) {
-                        localStorage.setItem('token', token);
-                        localStorage.setItem('userId', userId);
-                        localStorage.setItem('firstName', firstName);
-                        localStorage.setItem('lastName', lastName);
-                        alert('Authentication successful!');
-                        window.location.href = '/home'; // Redirect to home page
-                    } else {
-                        alert('Authentication failed!');
-                        window.location.href = '/'; // Redirect to login page
-                    }
-                })();
-            </script>
-        </body>
-        </html>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Authentication Success</title>
+    </head>
+    <body>
+      <script>
+        (function() {
+          const token = "${token}";
+          const userId = "${userId}";
+          const firstName = "${firstName}";
+          const lastName = "${lastName}";
+          const gender = "${gender}"; // Include gender in the local storage
+          if (token) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('userId', userId);
+            localStorage.setItem('firstName', firstName);
+            localStorage.setItem('lastName', lastName);
+            localStorage.setItem('gender', gender); // Save gender to local storage
+            alert('Authentication successful!');
+            window.location.href = '/home'; // Redirect to home page
+          } else {
+            alert('Authentication failed!');
+            window.location.href = '/'; // Redirect to login page
+          }
+        })();
+      </script>
+    </body>
+    </html>
     `;
     res.send(htmlContent);
 });
@@ -276,7 +344,16 @@ router.get('/users/:id', auth, async(req, res) => {
         res.status(500).send('Server error');
     }
 });
-
+// Get users by gender
+router.get('/users/gender/:gender', auth, async(req, res) => {
+    try {
+        const users = await User.find({ gender: req.params.gender });
+        res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
 // Retrieve all recipes with pagination
 // Retrieve all recipes with optional search query
 router.get('/recipes', async(req, res) => {
@@ -398,6 +475,35 @@ router.delete('/recipes/:id', auth, async(req, res) => {
     } catch (err) {
         console.error('Error deleting recipe:', err);
         res.status(500).json({ message: 'Error deleting recipe' });
+    }
+});
+// List recipes by category
+router.get('/recipes/category/:category', async(req, res) => {
+    const { category } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    try {
+        const recipes = await Recipe.find({ category })
+            .populate('user')
+            .populate('image')
+            .skip((page - 1) * limit)
+            .limit(limit);
+        res.status(200).json(recipes);
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        res.status(500).json({ message: 'Error fetching recipes' });
+    }
+});
+// List recipes by user
+router.get('/recipes/user/:userId', async(req, res) => {
+    const { userId } = req.params;
+    try {
+        const recipes = await Recipe.find({ user: userId })
+            .populate('user')
+            .populate('image');
+        res.status(200).json(recipes);
+    } catch (err) {
+        console.error('Error fetching recipes:', err);
+        res.status(500).json({ message: 'Error fetching recipes' });
     }
 });
 module.exports = router;

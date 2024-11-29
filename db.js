@@ -34,7 +34,8 @@ const userSchema = new mongoose.Schema({
     googleId: { type: String },
     githubId: { type: String },
     firstName: { type: String },
-    lastName: { type: String }
+    lastName: { type: String },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'], required: false } // Ensure gender is required
 });
 
 // Indexing for optimization
@@ -61,7 +62,8 @@ const userValidationSchema = Joi.object({
     googleId: Joi.string().optional(),
     githubId: Joi.string().optional(),
     firstName: Joi.string().optional(),
-    lastName: Joi.string().optional()
+    lastName: Joi.string().optional(),
+    gender: Joi.string().valid('Male', 'Female', 'Other').required() // Ensure gender validation
 });
 
 const recipeValidationSchema = Joi.object({
