@@ -258,9 +258,8 @@ router.post('/auth/complete-profile', async(req, res) => {
     }
 });
 
-// Authentication success route
 // Authentication success route (INSECURE)
-// Authentication success route
+
 router.get('/auth/success', (req, res) => {
     const { token, userId, firstName, lastName, gender } = req.query; // Include gender in the query parameters
     const htmlContent = `

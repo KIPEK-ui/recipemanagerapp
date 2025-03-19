@@ -127,7 +127,7 @@ async function getRecipesByUser(userId) {
 }
 
 // Retrieve all recipes with pagination
-async function getAllRecipes(page = 1, limit = 10) {
+async function getAllRecipes(page = 1, limit = 3) {
     try {
         const recipes = await Recipe.find()
             .populate('user')
@@ -155,7 +155,7 @@ async function getRecipeById(id) {
 }
 
 // Retrieve recipes by category with pagination
-async function getRecipesByCategory(category, page = 1, limit = 10) {
+async function getRecipesByCategory(category, page = 1, limit = 3) {
     try {
         const recipes = await Recipe.find({ category })
             .populate('user')
